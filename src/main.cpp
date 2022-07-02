@@ -11,8 +11,8 @@ ESP32Encoder encoder2;
 QTRSensors sArray;
 
 float Ki = 0;
-float Kp = 0.0421;//0.0392
-float Kd = 0.0978; // 0.097
+float Kp = 0.0438;//0.04352
+float Kd = 0.099; // 0.0992
 
 float KiR = 0;
 float KpR = 0.0168;//0.0392
@@ -67,10 +67,9 @@ void calcula_PID()
   erro_anterior = erro_f;
 }
 
-void controle_motores()
+void controle_motores(float vel_A, float vel_B)
 {
-  float vel_A = 168;
-  float vel_B = 168;
+  
   velesq = vel_A + PID;
   veldir = vel_B - PID;
   if (velesq < 15)
@@ -216,6 +215,97 @@ bool ler_sens_lat()
 }
 
 */
+
+void controle_com_mapeamento(int encVal){
+  if(encVal > 1800 && encVal < 8500){
+      calcula_PID_R();
+      controle_motores_R();
+
+    }
+
+    else if(encVal > 25000 && encVal < 29000){
+      calcula_PID_R();
+      controle_motores_R();
+
+    }else if(encVal > 41500 && encVal < 45000){
+      calcula_PID_R();
+      controle_motores_R();
+
+    }
+    else if(encVal > 78000 && encVal < 95500){
+      calcula_PID_R();
+      controle_motores_R();
+
+    }
+    else if(encVal > 97500 && encVal < 105000){
+      calcula_PID_R();
+      controle_motores_R();
+
+    }
+    else if(encVal > 109000 && encVal < 130000){
+      calcula_PID_R();
+      controle_motores_R();
+
+    }
+    else if(encVal > 132000 && encVal < 140000){
+      calcula_PID_R();
+      controle_motores_R();
+
+    }
+    else if(encVal > 163800 && encVal < 170000){
+      calcula_PID_R();
+      controle_motores_R();
+
+    }  
+    else if(encVal > 173500 && encVal < 182000){
+      calcula_PID_R();
+      controle_motores_R();
+
+    }  
+    else if(encVal > 187000 && encVal < 194000){
+      calcula_PID_R();
+      controle_motores_R();
+
+    }  
+    else if(encVal > 203500 && encVal < 240000){
+      calcula_PID_R();
+      controle_motores_R();
+
+    }  
+    else if(encVal > 266000){
+      digitalWrite(stby, LOW);
+
+    }
+    else{
+      calcula_PID();
+      controle_motores(140,140);
+    } 
+  }
+void controle_sem_mapeamento(){
+
+        calcula_PID();
+        controle_motores(145,145);
+}
+
+int v = 0;
+void mapeamento(){
+  digitalWrite(led, LOW);
+  if(ler_sens_lat() == true){  
+        
+          v = (v+1);
+          Serial.print("Marca ");
+          Serial.print(v);
+           Serial.print(": ");
+          Serial.print((encoder.getCount() + encoder2.getCount())/2);
+          //Serial.println(timer_in);
+
+        
+      digitalWrite(led, HIGH);  
+       
+     }
+}
+
+
 void setup()
 {
   Serial.begin(9600);
@@ -232,6 +322,7 @@ void setup()
   pinMode(led, OUTPUT);
   pinMode(s_lat_esq, INPUT);
   pinMode(s_lat_dir, INPUT);
+  pinMode(buzzer, OUTPUT);
 
   ESP32Encoder::useInternalWeakPullResistors = UP;
 
@@ -257,11 +348,14 @@ void setup()
   
 }
 bool bly = false;
-int v = 0;
+
 int d = 0;
+
 void loop()
 {
+ 
   digitalWrite(led, LOW);
+  digitalWrite(buzzer, LOW);
   timer_in = millis();
    
 
@@ -271,74 +365,26 @@ void loop()
           v = (v+1);
           Serial.print("Marca ");
           Serial.print(v);
-          Serial.print((encoder.getCount() + encoder2.getCount())/2);
+          Serial.print(": ");
+          Serial.println((encoder.getCount() + encoder2.getCount())/2);
           //Serial.println(timer_in);
 
         }
-      digitalWrite(led, HIGH);  
+      digitalWrite(led, HIGH); 
+      digitalWrite(buzzer, HIGH);
        timer_prev3 = timer_in;
      }
-  /*if(ler_sens_lat_Dir() == true){  
-        if(timer_in - timer_prev4 >= 10){
-          d = (d+1);
-          if(d == 1){
-            enc = 0;
-            Serial.println("marca zero");
-           // Serial.print(calculate_rpm());
-          }
-          if(d == 5){
-           if(timer_in - timer_prev2 >= 800){
-            digitalWrite(stby,LOW);
-           }
-
-          }
-        }
-        timer_prev2 = timer_in;
-       timer_prev4 = timer_in;
-     }
-  
- */
-  
     
     if(timer_in - timer_prev >= 10){
       ler_sensores();
+      controle_sem_mapeamento();
       float encVal = ((encoder.getCount() + encoder2.getCount())/2);
-
-    if(encVal < 18000 && encVal > 1800){
-      calcula_PID_R();
-      controle_motores_R();
-
+      if(encVal > 270000){
+        digitalWrite(stby, LOW);
+      }
     }
 
-    else if(encVal > 51600 && encVal < 68000){
-      calcula_PID_R();
-      controle_motores_R();
 
-    }else if(encVal > 24000 && encVal < 29000){
-      calcula_PID_R();
-      controle_motores_R();
-
-    }
-    else if(encVal > 134000 && encVal < 136500){
-      calcula_PID_R();
-      controle_motores_R();
-
-    }
-    else if(encVal > 90000 && encVal < 100900){
-      calcula_PID_R();
-      controle_motores_R();
-
-    }
-    else if(encVal > 166000){
-      digitalWrite(stby, LOW);
-
-    }
-     else{
-      calcula_PID();
-      controle_motores();
-    }
-  timer_prev = timer_in;
-    }
 
  
 }

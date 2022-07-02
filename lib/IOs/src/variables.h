@@ -27,6 +27,8 @@
 #define enc_dir_B 18
 
 #define led 13
+#define buzzer 14
+
 const float pul_per_turn = 360;
 int count_enc_esq = 0;
 int count_enc_dir = 0;
