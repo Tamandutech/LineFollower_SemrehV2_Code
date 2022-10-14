@@ -10,33 +10,19 @@ ESP32Encoder encoder;
 ESP32Encoder encoder2;
 QTRSensors sArray;
 
-float Ki = 0;
-float Kp = 0.0438;//0.04352
-float Kd = 0.099; // 0.0992
-
-float KiR = 0;
-float KpR = 0.0168;//0.0392
-float KdR = 0.0839; // 0.097
-
 #define BLYNK_PRINT Serial
-
 /* Fill-in your Template ID (only if using Blynk.Cloud) */
 #define BLYNK_TEMPLATE_ID   "TMPLa2VAm_FV"
-
-
 #include <WiFi.h>
 #include <WiFiClient.h>
 #include <BlynkSimpleEsp32.h>
-
 // You should get Auth Token in the Blynk App.
 // Go to the Project Settings (nut icon).
 char auth[] = "k0uTh2IJ18o7CHMXs2DlYBY8jnuJl5To";
-
 // Your WiFi credentials.
 // Set password to "" for open networks.
 char ssid[] = "Renzzo";
 char pass[] = "Renzo753159456";
-
 // BLYNK_WRITE(V0)
 // {
 //   if(param.asInt()==1){
@@ -49,6 +35,17 @@ char pass[] = "Renzo753159456";
 //   }
 // }
 
+
+float Ki = 0;
+float Kp = 0.0445;//0.04352
+float Kd = 0.340; // 0.0992
+
+float KiR = 0;
+float KpR = 0.035;//0.0392
+float KdR = 0.0899; // 0.097
+
+
+
 void ler_sensores()
 {
 
@@ -57,7 +54,6 @@ void ler_sensores()
   erro_f = -1 * erro_sensores;
  
 }
-
 void calcula_PID()
 {
   
@@ -66,7 +62,6 @@ void calcula_PID()
   PID = (Kp * P) + (Kd * D);
   erro_anterior = erro_f;
 }
-
 void controle_motores(float vel_A, float vel_B)
 {
   
@@ -89,7 +84,6 @@ void controle_motores(float vel_A, float vel_B)
   digitalWrite(in_esq2, HIGH);
   analogWrite(pwmB, veldir);
 }
-
 void calcula_PID_R()
 {
   
@@ -98,11 +92,7 @@ void calcula_PID_R()
   PIDR = (KpR * PR) + (KdR * DR);
   erro_anterior = erro_f;
 }
-
-void controle_motores_R()
-{
-  float vel_AR = 255;
-  float vel_BR = 255;
+void controle_motores_R(float vel_AR, float vel_BR){
   velesqR = vel_AR + PIDR;
   veldirR = vel_BR- PIDR;
   if (velesqR < 15)
@@ -122,9 +112,6 @@ void controle_motores_R()
   digitalWrite(in_esq2, HIGH);
   analogWrite(pwmB, veldirR);
 }
-
-
-
 int calculate_rpm()
 {
 
@@ -180,7 +167,7 @@ bool ler_sens_lat()
 }
 
 
-/*bool ler_sens_lat_Dir()
+/*bool ler_sens_lat_Dir(),c
 {
   #define tempoDebounce2 200
 
@@ -215,97 +202,125 @@ bool ler_sens_lat()
 }
 
 */
-
-void controle_com_mapeamento(int encVal){
-  if(encVal > 1800 && encVal < 8500){
-      calcula_PID_R();
-      controle_motores_R();
-
-    }
-
-    else if(encVal > 25000 && encVal < 29000){
-      calcula_PID_R();
-      controle_motores_R();
-
-    }else if(encVal > 41500 && encVal < 45000){
-      calcula_PID_R();
-      controle_motores_R();
-
-    }
-    else if(encVal > 78000 && encVal < 95500){
-      calcula_PID_R();
-      controle_motores_R();
-
-    }
-    else if(encVal > 97500 && encVal < 105000){
-      calcula_PID_R();
-      controle_motores_R();
-
-    }
-    else if(encVal > 109000 && encVal < 130000){
-      calcula_PID_R();
-      controle_motores_R();
-
-    }
-    else if(encVal > 132000 && encVal < 140000){
-      calcula_PID_R();
-      controle_motores_R();
-
-    }
-    else if(encVal > 163800 && encVal < 170000){
-      calcula_PID_R();
-      controle_motores_R();
-
-    }  
-    else if(encVal > 173500 && encVal < 182000){
-      calcula_PID_R();
-      controle_motores_R();
-
-    }  
-    else if(encVal > 187000 && encVal < 194000){
-      calcula_PID_R();
-      controle_motores_R();
-
-    }  
-    else if(encVal > 203500 && encVal < 240000){
-      calcula_PID_R();
-      controle_motores_R();
-
-    }  
-    else if(encVal > 266000){
-      digitalWrite(stby, LOW);
-
-    }
-    else{
-      calcula_PID();
-      controle_motores(140,140);
-    } 
-  }
 void controle_sem_mapeamento(){
 
         calcula_PID();
-        controle_motores(145,145);
+        controle_motores(100,100);
 }
+
+void controle_com_mapeamento(int encVal){
+  digitalWrite(led, LOW);
+  digitalWrite(buzzer, LOW);
+  if(encVal > 0 && encVal < 24000){
+        calcula_PID();
+        controle_motores(135,135);
+
+      }
+      /*else if(encVal > 113000 && encVal < 120000){
+        digitalWrite(buzzer, HIGH);
+        calcula_PID_R();
+        controle_motores_R();
+
+      }*/ 
+      else if(encVal > 99000 && encVal < 103600){ //diagonal
+        digitalWrite(led, HIGH);
+        digitalWrite(buzzer, HIGH);
+        calcula_PID_R();
+        controle_motores_R(245, 245);
+      }      else if(encVal > 109850 && encVal < 114600){ //antes reta media
+        digitalWrite(led, HIGH);
+        digitalWrite(buzzer, HIGH);
+        calcula_PID_R();
+        controle_motores_R(245, 245);
+
+      }else if(encVal > 119600 && encVal < 137000){ //reta media
+        digitalWrite(led, HIGH);
+        digitalWrite(buzzer, HIGH);
+        calcula_PID_R();
+        controle_motores_R(255, 255);
+
+      }
+      else if(encVal > 144700 && encVal < 149000){ //reta vertical
+        digitalWrite(led, HIGH);
+        digitalWrite(buzzer, HIGH);
+
+        calcula_PID_R();
+        controle_motores_R(245, 245);
+
+    }  
+    else if(encVal > 178000 && encVal < 183300){ //reta 1 de 3
+        digitalWrite(led, HIGH);
+       digitalWrite(buzzer, HIGH);
+
+        calcula_PID_R();
+        controle_motores_R(240, 240);
+
+    }
+    else if(encVal > 190000 && encVal < 195400){ //reta 2 de 3
+        digitalWrite(led, HIGH);
+        digitalWrite(buzzer, HIGH);
+
+        calcula_PID_R();
+        controle_motores_R(240, 240);
+
+    }
+
+      else if(encVal > 202200 && encVal < 207900){ //reta 3 de 3
+        digitalWrite(led, HIGH);
+        digitalWrite(buzzer, HIGH);
+
+        calcula_PID_R();
+        controle_motores_R(240, 240);
+
+      }
+      else if(encVal > 221000 && encVal < 251000){ //retona
+        digitalWrite(led, HIGH);
+        digitalWrite(buzzer, HIGH);
+
+        calcula_PID_R();
+        controle_motores_R(255, 255);
+
+      } 
+      else if(encVal > 250800 && encVal < 280000){ //final
+        calcula_PID();
+        controle_motores(120,120);
+
+      }
+      else if(encVal > 275000){
+        digitalWrite(stby, LOW);
+      }
+  
+      else{
+        controle_sem_mapeamento();
+      }
+  }
 
 int v = 0;
 void mapeamento(){
+  timer_in = millis();
+
   digitalWrite(led, LOW);
+  digitalWrite(buzzer, LOW);
+  
+   
+
+          
   if(ler_sens_lat() == true){  
-        
+        if(timer_in - timer_prev3 >= 10){
           v = (v+1);
           Serial.print("Marca ");
           Serial.print(v);
-           Serial.print(": ");
-          Serial.print((encoder.getCount() + encoder2.getCount())/2);
+          Serial.print(": ");
+          Serial.println((encoder.getCount() + encoder2.getCount())/2);
           //Serial.println(timer_in);
 
-        
-      digitalWrite(led, HIGH);  
-       
+        }
+      digitalWrite(led, HIGH); 
+      digitalWrite(buzzer, HIGH);
+       timer_prev3 = timer_in;
      }
+    
 }
-
-
 void setup()
 {
   Serial.begin(9600);
@@ -349,42 +364,14 @@ void setup()
 }
 bool bly = false;
 
-int d = 0;
+
 
 void loop()
 {
- 
-  digitalWrite(led, LOW);
-  digitalWrite(buzzer, LOW);
-  timer_in = millis();
-   
 
-          
-  if(ler_sens_lat() == true){  
-        if(timer_in - timer_prev3 >= 10){
-          v = (v+1);
-          Serial.print("Marca ");
-          Serial.print(v);
-          Serial.print(": ");
-          Serial.println((encoder.getCount() + encoder2.getCount())/2);
-          //Serial.println(timer_in);
-
-        }
-      digitalWrite(led, HIGH); 
-      digitalWrite(buzzer, HIGH);
-       timer_prev3 = timer_in;
-     }
-    
-    if(timer_in - timer_prev >= 10){
       ler_sensores();
+      int encVal = ((encoder.getCount() + encoder2.getCount())/2);
       controle_sem_mapeamento();
-      float encVal = ((encoder.getCount() + encoder2.getCount())/2);
-      if(encVal > 270000){
-        digitalWrite(stby, LOW);
-      }
-    }
-
-
-
  
 }
+
