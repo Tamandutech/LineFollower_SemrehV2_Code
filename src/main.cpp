@@ -1,5 +1,4 @@
 #include <Arduino.h>
-#include <ESP32Servo.h>
 #include <ESP32Encoder.h>
 #include <variables.h>
 #include <QTRSensors.h>

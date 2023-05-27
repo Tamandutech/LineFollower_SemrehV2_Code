@@ -45,6 +45,11 @@
 | :---: | :---: |
 | IN DATA | GPIO32 |
 
+**Buzzer**
+
+| Função | Portas |
+| :---: | :---: |
+| IN DATA | GPIO12 |
 
 **Bill of Materials**
 

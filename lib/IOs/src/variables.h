@@ -1,33 +1,33 @@
 //ADC_sensores_frontais
-#define out_s_front 32
-#define clk 33
-#define in_s_front 25
-#define cs_s_front 26
+#define out_s_front 19
+#define clk 18
+#define in_s_front 22
+#define cs_s_front 23
 
 //driver_motor
-#define pwmA 2
-#define pwmB 23
+#define pwmA 14
+#define pwmB 13
 
-#define in_dir1	16
-#define in_dir2 4
+#define in_dir1	25
+#define in_dir2 21
 
-#define in_esq1 21
-#define in_esq2 22
+#define in_esq1 26
+#define in_esq2 27
 
 #define stby 17
 
 //sensores_laterais
-#define s_lat_esq 27
-#define s_lat_dir 35
+#define s_lat_esq 39
+#define s_lat_dir 33
 
 //encoder
-#define enc_eq_A 15
-#define enc_eq_B 5
-#define enc_dir_A 19
-#define enc_dir_B 18
+#define enc_eq_A 34
+#define enc_eq_B 35
+#define enc_dir_A 16
+#define enc_dir_B 4
 
-#define led 13
-#define buzzer 14
+#define led 32
+#define buzzer 12
 
 const float pul_per_turn = 360;
 int count_enc_esq = 0;
