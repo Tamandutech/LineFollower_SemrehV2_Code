@@ -2,6 +2,10 @@
 #include <ESP32Encoder.h>
 #include <variables.h>
 #include <QTRSensors.h>
+#include <WiFi.h>
+#include <WiFiClient.h>
+#include <BlynkSimpleEsp32.h>
+#include <Adafruit_NeoPixel.h>
 
 int enc = 0;
 
@@ -12,9 +16,13 @@ QTRSensors sArray;
 #define BLYNK_PRINT Serial
 /* Fill-in your Template ID (only if using Blynk.Cloud) */
 #define BLYNK_TEMPLATE_ID   "TMPLa2VAm_FV"
-#include <WiFi.h>
-#include <WiFiClient.h>
-#include <BlynkSimpleEsp32.h>
+
+// How many NeoPixels are attached to the Arduino?
+#define LED_COUNT 2
+
+// Declare our NeoPixel strip object:
+Adafruit_NeoPixel strip(LED_COUNT, led, NEO_RGB + NEO_KHZ800);
+
 // You should get Auth Token in the Blynk App.
 // Go to the Project Settings (nut icon).
 char auth[] = "k0uTh2IJ18o7CHMXs2DlYBY8jnuJl5To";
@@ -63,7 +71,7 @@ void calcula_PID()
 }
 void controle_motores(float vel_A, float vel_B)
 {
-  
+  Serial.println("controle motor");
   velesq = vel_A + PID;
   veldir = vel_B - PID;
   if (velesq < 15)
@@ -208,7 +216,6 @@ void controle_sem_mapeamento(){
 }
 
 void controle_com_mapeamento(int encVal){
-  digitalWrite(led, LOW);
   digitalWrite(buzzer, LOW);
   if(encVal > 0 && encVal < 24000){
         calcula_PID();
@@ -222,25 +229,21 @@ void controle_com_mapeamento(int encVal){
 
       }*/ 
       else if(encVal > 99000 && encVal < 103600){ //diagonal
-        digitalWrite(led, HIGH);
         digitalWrite(buzzer, HIGH);
         calcula_PID_R();
         controle_motores_R(245, 245);
       }      else if(encVal > 109850 && encVal < 114600){ //antes reta media
-        digitalWrite(led, HIGH);
         digitalWrite(buzzer, HIGH);
         calcula_PID_R();
         controle_motores_R(245, 245);
 
       }else if(encVal > 119600 && encVal < 137000){ //reta media
-        digitalWrite(led, HIGH);
         digitalWrite(buzzer, HIGH);
         calcula_PID_R();
         controle_motores_R(255, 255);
 
       }
       else if(encVal > 144700 && encVal < 149000){ //reta vertical
-        digitalWrite(led, HIGH);
         digitalWrite(buzzer, HIGH);
 
         calcula_PID_R();
@@ -248,7 +251,6 @@ void controle_com_mapeamento(int encVal){
 
     }  
     else if(encVal > 178000 && encVal < 183300){ //reta 1 de 3
-        digitalWrite(led, HIGH);
        digitalWrite(buzzer, HIGH);
 
         calcula_PID_R();
@@ -256,7 +258,6 @@ void controle_com_mapeamento(int encVal){
 
     }
     else if(encVal > 190000 && encVal < 195400){ //reta 2 de 3
-        digitalWrite(led, HIGH);
         digitalWrite(buzzer, HIGH);
 
         calcula_PID_R();
@@ -265,7 +266,6 @@ void controle_com_mapeamento(int encVal){
     }
 
       else if(encVal > 202200 && encVal < 207900){ //reta 3 de 3
-        digitalWrite(led, HIGH);
         digitalWrite(buzzer, HIGH);
 
         calcula_PID_R();
@@ -273,7 +273,6 @@ void controle_com_mapeamento(int encVal){
 
       }
       else if(encVal > 221000 && encVal < 251000){ //retona
-        digitalWrite(led, HIGH);
         digitalWrite(buzzer, HIGH);
 
         calcula_PID_R();
@@ -298,11 +297,7 @@ int v = 0;
 void mapeamento(){
   timer_in = millis();
 
-  digitalWrite(led, LOW);
   digitalWrite(buzzer, LOW);
-  
-   
-
           
   if(ler_sens_lat() == true){  
         if(timer_in - timer_prev3 >= 10){
@@ -314,7 +309,6 @@ void mapeamento(){
           //Serial.println(timer_in);
 
         }
-      digitalWrite(led, HIGH); 
       digitalWrite(buzzer, HIGH);
        timer_prev3 = timer_in;
      }
@@ -322,9 +316,7 @@ void mapeamento(){
 }
 void setup()
 {
-  Serial.begin(9600);
-  
- 
+  Serial.begin(115200);
 
   pinMode(in_dir1, OUTPUT);
   pinMode(in_dir2, OUTPUT);
@@ -337,6 +329,10 @@ void setup()
   pinMode(s_lat_esq, INPUT);
   pinMode(s_lat_dir, INPUT);
   pinMode(buzzer, OUTPUT);
+
+  strip.begin();
+  strip.setPixelColor(1, 255, 0, 255);
+  strip.show();
 
   ESP32Encoder::useInternalWeakPullResistors = UP;
 
@@ -367,10 +363,13 @@ bool bly = false;
 
 void loop()
 {
-
-      ler_sensores();
-      int encVal = ((encoder.getCount() + encoder2.getCount())/2);
-      controle_sem_mapeamento();
- 
+  strip.setPixelColor(1, 0, 0, 255);
+  ler_sensores();
+  int encVal = ((encoder.getCount() + encoder2.getCount())/2);
+  controle_sem_mapeamento();
+  strip.show();
+  digitalWrite(in_esq1, LOW);
+  digitalWrite(in_esq2, HIGH);
+  analogWrite(pwmB, veldir);
 }
 

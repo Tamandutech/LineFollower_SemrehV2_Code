@@ -26,6 +26,7 @@
 #define enc_dir_A 16
 #define enc_dir_B 4
 
+//Alerts
 #define led 32
 #define buzzer 12
 
