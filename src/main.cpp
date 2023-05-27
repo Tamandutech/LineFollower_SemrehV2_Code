@@ -212,6 +212,7 @@ bool ler_sens_lat()
 void controle_sem_mapeamento(){
 
         calcula_PID();
+        Serial.println("");
         controle_motores(100,100);
 }
 
