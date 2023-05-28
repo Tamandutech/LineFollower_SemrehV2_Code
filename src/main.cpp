@@ -369,8 +369,5 @@ void loop()
   int encVal = ((encoder.getCount() + encoder2.getCount())/2);
   controle_sem_mapeamento();
   strip.show();
-  digitalWrite(in_esq1, LOW);
-  digitalWrite(in_esq2, HIGH);
-  analogWrite(pwmB, veldir);
 }
 
