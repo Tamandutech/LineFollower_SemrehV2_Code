@@ -21,7 +21,7 @@ QTRSensors sArray;
 #define LED_COUNT 2
 
 // Declare our NeoPixel strip object:
-Adafruit_NeoPixel strip(LED_COUNT, led, NEO_RGB + NEO_KHZ800);
+Adafruit_NeoPixel led_stip(LED_COUNT, led, NEO_GRB + NEO_KHZ800);
 
 // You should get Auth Token in the Blynk App.
 // Go to the Project Settings (nut icon).
@@ -30,6 +30,7 @@ char auth[] = "k0uTh2IJ18o7CHMXs2DlYBY8jnuJl5To";
 // Set password to "" for open networks.
 char ssid[] = "Renzzo";
 char pass[] = "Renzo753159456";
+
 // BLYNK_WRITE(V0)
 // {
 //   if(param.asInt()==1){
@@ -71,7 +72,7 @@ void calcula_PID()
 }
 void controle_motores(float vel_A, float vel_B)
 {
-  Serial.println("controle motor");
+  //Serial.println("controle motor");
   velesq = vel_A + PID;
   veldir = vel_B - PID;
   if (velesq < 15)
@@ -138,35 +139,31 @@ int calculate_rpm()
   return enc;
   
 }
-bool ler_sens_lat()
+
+bool ler_sens_lat_esq()
 {
-  #define tempoDebounce 200
+  #define tempoDebounce 20
 
   bool estadoSLatEsq;
   static bool estadoSLatEsqAnt;
   static bool estadoRet = true;
   static unsigned long delaySenLat = 0;
   int x = 0;
-  int y = 0;
   if((millis() - delaySenLat)> tempoDebounce){
     x = analogRead(s_lat_esq);
-    y = analogRead(s_lat_dir);
-    // if(x < 100  && y <100){
-    //   estadoSLatEsq = false;     
-    // }
-    if(x < 150){
+
+    if(x < 200){
       estadoSLatEsq = true;     
     }
     else{
       estadoSLatEsq = false;
     }
-    
-    
-    
+
     if(estadoSLatEsq && (estadoSLatEsq != estadoSLatEsqAnt)){
       estadoRet = !estadoRet;
       delaySenLat = millis();
     }
+
     estadoSLatEsqAnt = estadoSLatEsq;
     
   }
@@ -174,30 +171,25 @@ bool ler_sens_lat()
 }
 
 
-/*bool ler_sens_lat_Dir(),c
+bool ler_sens_lat_dir()
 {
-  #define tempoDebounce2 200
+  #define tempoDebounce2 20
 
   bool estadoSLatDir;
   static bool estadoSLatDirAnt;
   static bool estadoRetDir = true;
   static unsigned long delaySenLatDir = 0;
-  int x = 0;
   int y = 0;
   if((millis() - delaySenLatDir)> tempoDebounce2){
     y = analogRead(s_lat_dir);
-    // if(x < 100  && y <100){
-    //   estadoSLatEsq = false;     
-    // }
-    if(y < 150){
+    
+    if(y < 200){
       estadoSLatDir = true;     
     }
     else{
       estadoSLatDir = false;
     }
-    
-    
-    
+
     if(estadoSLatDir && (estadoSLatDir != estadoSLatDirAnt)){
       estadoRetDir = !estadoRetDir;
       delaySenLatDir = millis();
@@ -208,11 +200,9 @@ bool ler_sens_lat()
   return estadoSLatDir;
 }
 
-*/
 void controle_sem_mapeamento(){
 
         calcula_PID();
-        Serial.println("");
         controle_motores(100,100);
 }
 
@@ -221,14 +211,7 @@ void controle_com_mapeamento(int encVal){
   if(encVal > 0 && encVal < 24000){
         calcula_PID();
         controle_motores(135,135);
-
       }
-      /*else if(encVal > 113000 && encVal < 120000){
-        digitalWrite(buzzer, HIGH);
-        calcula_PID_R();
-        controle_motores_R();
-
-      }*/ 
       else if(encVal > 99000 && encVal < 103600){ //diagonal
         digitalWrite(buzzer, HIGH);
         calcula_PID_R();
@@ -242,65 +225,57 @@ void controle_com_mapeamento(int encVal){
         digitalWrite(buzzer, HIGH);
         calcula_PID_R();
         controle_motores_R(255, 255);
-
       }
       else if(encVal > 144700 && encVal < 149000){ //reta vertical
         digitalWrite(buzzer, HIGH);
 
         calcula_PID_R();
         controle_motores_R(245, 245);
+      }  
+      else if(encVal > 178000 && encVal < 183300){ //reta 1 de 3
+          digitalWrite(buzzer, HIGH);
 
-    }  
-    else if(encVal > 178000 && encVal < 183300){ //reta 1 de 3
-       digitalWrite(buzzer, HIGH);
+          calcula_PID_R();
+          controle_motores_R(240, 240);
+      }
+      else if(encVal > 190000 && encVal < 195400){ //reta 2 de 3
+          digitalWrite(buzzer, HIGH);
 
-        calcula_PID_R();
-        controle_motores_R(240, 240);
-
-    }
-    else if(encVal > 190000 && encVal < 195400){ //reta 2 de 3
-        digitalWrite(buzzer, HIGH);
-
-        calcula_PID_R();
-        controle_motores_R(240, 240);
-
-    }
-
+          calcula_PID_R();
+          controle_motores_R(240, 240);
+      }
       else if(encVal > 202200 && encVal < 207900){ //reta 3 de 3
         digitalWrite(buzzer, HIGH);
 
         calcula_PID_R();
         controle_motores_R(240, 240);
-
       }
       else if(encVal > 221000 && encVal < 251000){ //retona
         digitalWrite(buzzer, HIGH);
 
         calcula_PID_R();
         controle_motores_R(255, 255);
-
       } 
       else if(encVal > 250800 && encVal < 280000){ //final
         calcula_PID();
         controle_motores(120,120);
-
       }
       else if(encVal > 275000){
         digitalWrite(stby, LOW);
       }
-  
       else{
         controle_sem_mapeamento();
       }
   }
 
 int v = 0;
+
 void mapeamento(){
   timer_in = millis();
 
   digitalWrite(buzzer, LOW);
           
-  if(ler_sens_lat() == true){  
+  if(ler_sens_lat_dir() == true){  
         if(timer_in - timer_prev3 >= 10){
           v = (v+1);
           Serial.print("Marca ");
@@ -331,9 +306,7 @@ void setup()
   pinMode(s_lat_dir, INPUT);
   pinMode(buzzer, OUTPUT);
 
-  strip.begin();
-  strip.setPixelColor(1, 255, 0, 255);
-  strip.show();
+  led_stip.begin();
 
   ESP32Encoder::useInternalWeakPullResistors = UP;
 
@@ -351,8 +324,12 @@ void setup()
 
   for (uint16_t i = 0; i < 300; i++)
   {
+    led_stip.setPixelColor(1, 0, 255, 0);
+    led_stip.show();
     sArray.calibrate();
     delay(20);
+    led_stip.setPixelColor(1, 0, 0, 0);
+    led_stip.show();
   }
 
   //Blynk.run();
@@ -364,10 +341,15 @@ bool bly = false;
 
 void loop()
 {
-  strip.setPixelColor(1, 0, 0, 255);
+  led_stip.setPixelColor(0, 255, 0, 0);
+  led_stip.show();
   ler_sensores();
-  int encVal = ((encoder.getCount() + encoder2.getCount())/2);
+  //int encVal = ((encoder.getCount() + encoder2.getCount())/2);
+  Serial.print(encoder.getCount());
+  Serial.print(",");
+  Serial.println(encoder2.getCount());
   controle_sem_mapeamento();
-  strip.show();
+  digitalWrite(buzzer, ler_sens_lat_esq());
+  digitalWrite(buzzer, ler_sens_lat_dir());
 }
 
