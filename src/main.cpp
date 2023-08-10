@@ -26,8 +26,6 @@ float KiR = 0;
 float KpR = 0.035;//0.0392
 float KdR = 0.0899; // 0.097
 
-
-
 void ler_sensores()
 {
 
@@ -180,6 +178,54 @@ void controle_sem_mapeamento(){
         controle_motores(100,100);
 }
 
+//##############################################################################################
+//################ INICIO: NOVA PROPOSTA DE CONTROLE COM MAPEAMENTO ############################
+struct Range {
+    int minValue;
+    int maxValue;
+    int leftMotorSpeed;
+    int rightMotorSpeed;
+};
+
+const int numRanges = 8;  // Número de intervalos
+
+Range ranges[numRanges] = {
+    {0, 24000, 135, 135},         // intervalo 1
+    {99000, 103600, 245, 245},    // intervalo 2
+    {109850, 114600, 245, 245},   // intervalo 3
+    {119600, 137000, 255, 255},   // intervalo 3
+    {144700, 149000, 245, 245},   // intervalo 4
+    {178000, 207900, 240, 240},   // intervalo 5
+    {221000, 280000, 255, 255},   // intervalo 7
+    {275000, INT_MAX, 120, 120}   // final
+};
+
+void calculaEControlePID_R(int leftSpeed, int rightSpeed) { //Implementar parametro de tipo de PID; reta, curva, curva longa
+    calcula_PID_R();
+    controle_motores_R(leftSpeed, rightSpeed);
+}
+
+void controle_com_mapeamento2(int encVal) {
+
+    for (int i = 0; i < numRanges; ++i) {
+        if (encVal > ranges[i].minValue && encVal < ranges[i].maxValue) {
+
+            calculaEControlePID_R(ranges[i].leftMotorSpeed, ranges[i].rightMotorSpeed);
+
+            if (i > numRanges-1) {
+                digitalWrite(stby, LOW);
+            }
+            return;
+        }
+    }
+    // Se nenhum intervalo for correspondido, executar ação padrão
+    controle_sem_mapeamento();
+}
+
+//################ FIM: NOVA PROPOSTA DE CONTROLE COM MAPEAMENTO ###############################
+//##############################################################################################
+
+
 void controle_com_mapeamento(int encVal){
   digitalWrite(buzzer, LOW);
   if(encVal > 0 && encVal < 24000){
@@ -306,25 +352,17 @@ void setup()
     led_stip.setPixelColor(1, 0, 0, 0);
     led_stip.show();
   }
-
-  //Blynk.run();
   
 }
 bool bly = false;
-
-
 
 void loop()
 {
   led_stip.setPixelColor(0, 255, 0, 0);
   led_stip.show();
   ler_sensores();
-  //int encVal = ((encoder.getCount() + encoder2.getCount())/2);
-  Serial.print(encoder.getCount());
-  Serial.print(",");
-  SerialBT.println("Ricardo");
-  delay(1000);
-  Serial.println(encoder2.getCount());
+  int encVal = ((encoder.getCount() + encoder2.getCount())/2);
+  SerialBT.println(encVal);
   controle_sem_mapeamento();
   digitalWrite(buzzer, ler_sens_lat_esq());
   digitalWrite(buzzer, ler_sens_lat_dir());
