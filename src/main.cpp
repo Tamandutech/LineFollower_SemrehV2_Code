@@ -2,47 +2,21 @@
 #include <ESP32Encoder.h>
 #include <variables.h>
 #include <QTRSensors.h>
-#include <WiFi.h>
-#include <WiFiClient.h>
-#include <BlynkSimpleEsp32.h>
 #include <Adafruit_NeoPixel.h>
+#include <BluetoothSerial.h>
 
 int enc = 0;
 
 ESP32Encoder encoder;
 ESP32Encoder encoder2;
 QTRSensors sArray;
-
-#define BLYNK_PRINT Serial
-/* Fill-in your Template ID (only if using Blynk.Cloud) */
-#define BLYNK_TEMPLATE_ID   "TMPLa2VAm_FV"
+BluetoothSerial SerialBT;
 
 // How many NeoPixels are attached to the Arduino?
 #define LED_COUNT 2
 
 // Declare our NeoPixel strip object:
 Adafruit_NeoPixel led_stip(LED_COUNT, led, NEO_GRB + NEO_KHZ800);
-
-// You should get Auth Token in the Blynk App.
-// Go to the Project Settings (nut icon).
-char auth[] = "k0uTh2IJ18o7CHMXs2DlYBY8jnuJl5To";
-// Your WiFi credentials.
-// Set password to "" for open networks.
-char ssid[] = "Renzzo";
-char pass[] = "Renzo753159456";
-
-// BLYNK_WRITE(V0)
-// {
-//   if(param.asInt()==1){
-//     Serial.println("recebi");
-//     // analogWrite(0, velesq);
-//     // analogWrite(0, veldir);
-//   }
-//   else{
-//     Serial.println("recebi 2");
-//   }
-// }
-
 
 float Ki = 0;
 float Kp = 0.0445;//0.04352
@@ -307,6 +281,7 @@ void setup()
   pinMode(buzzer, OUTPUT);
 
   led_stip.begin();
+  SerialBT.begin("Semreh"); //Bluetooth device name
 
   ESP32Encoder::useInternalWeakPullResistors = UP;
 
@@ -347,6 +322,8 @@ void loop()
   //int encVal = ((encoder.getCount() + encoder2.getCount())/2);
   Serial.print(encoder.getCount());
   Serial.print(",");
+  SerialBT.println("Ricardo");
+  delay(1000);
   Serial.println(encoder2.getCount());
   controle_sem_mapeamento();
   digitalWrite(buzzer, ler_sens_lat_esq());

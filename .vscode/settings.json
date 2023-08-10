@@ -2,6 +2,6 @@
     "files.associations": {
         "random": "cpp"
     },
-    "idf.portWin": "COM10",
+    "idf.portWin": "COM13",
     "idf.flashType": "UART"
 }
