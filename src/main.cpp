@@ -2,47 +2,21 @@
 #include <ESP32Encoder.h>
 #include <variables.h>
 #include <QTRSensors.h>
-#include <WiFi.h>
-#include <WiFiClient.h>
-#include <BlynkSimpleEsp32.h>
 #include <Adafruit_NeoPixel.h>
+#include <BluetoothSerial.h>
 
 int enc = 0;
 
 ESP32Encoder encoder;
 ESP32Encoder encoder2;
 QTRSensors sArray;
-
-#define BLYNK_PRINT Serial
-/* Fill-in your Template ID (only if using Blynk.Cloud) */
-#define BLYNK_TEMPLATE_ID   "TMPLa2VAm_FV"
+BluetoothSerial SerialBT;
 
 // How many NeoPixels are attached to the Arduino?
 #define LED_COUNT 2
 
 // Declare our NeoPixel strip object:
 Adafruit_NeoPixel led_stip(LED_COUNT, led, NEO_GRB + NEO_KHZ800);
-
-// You should get Auth Token in the Blynk App.
-// Go to the Project Settings (nut icon).
-char auth[] = "k0uTh2IJ18o7CHMXs2DlYBY8jnuJl5To";
-// Your WiFi credentials.
-// Set password to "" for open networks.
-char ssid[] = "Renzzo";
-char pass[] = "Renzo753159456";
-
-// BLYNK_WRITE(V0)
-// {
-//   if(param.asInt()==1){
-//     Serial.println("recebi");
-//     // analogWrite(0, velesq);
-//     // analogWrite(0, veldir);
-//   }
-//   else{
-//     Serial.println("recebi 2");
-//   }
-// }
-
 
 float Ki = 0;
 float Kp = 0.0445;//0.04352
@@ -51,8 +25,6 @@ float Kd = 0.340; // 0.0992
 float KiR = 0;
 float KpR = 0.035;//0.0392
 float KdR = 0.0899; // 0.097
-
-
 
 void ler_sensores()
 {
@@ -206,6 +178,54 @@ void controle_sem_mapeamento(){
         controle_motores(100,100);
 }
 
+//##############################################################################################
+//################ INICIO: NOVA PROPOSTA DE CONTROLE COM MAPEAMENTO ############################
+struct Range {
+    int minValue;
+    int maxValue;
+    int leftMotorSpeed;
+    int rightMotorSpeed;
+};
+
+const int numRanges = 8;  // Número de intervalos
+
+Range ranges[numRanges] = {
+    {0, 24000, 135, 135},         // intervalo 1
+    {99000, 103600, 245, 245},    // intervalo 2
+    {109850, 114600, 245, 245},   // intervalo 3
+    {119600, 137000, 255, 255},   // intervalo 3
+    {144700, 149000, 245, 245},   // intervalo 4
+    {178000, 207900, 240, 240},   // intervalo 5
+    {221000, 280000, 255, 255},   // intervalo 7
+    {275000, INT_MAX, 120, 120}   // final
+};
+
+void calculaEControlePID_R(int leftSpeed, int rightSpeed) { //Implementar parametro de tipo de PID; reta, curva, curva longa
+    calcula_PID_R();
+    controle_motores_R(leftSpeed, rightSpeed);
+}
+
+void controle_com_mapeamento2(int encVal) {
+
+    for (int i = 0; i < numRanges; ++i) {
+        if (encVal > ranges[i].minValue && encVal < ranges[i].maxValue) {
+
+            calculaEControlePID_R(ranges[i].leftMotorSpeed, ranges[i].rightMotorSpeed);
+
+            if (i > numRanges-1) {
+                digitalWrite(stby, LOW);
+            }
+            return;
+        }
+    }
+    // Se nenhum intervalo for correspondido, executar ação padrão
+    controle_sem_mapeamento();
+}
+
+//################ FIM: NOVA PROPOSTA DE CONTROLE COM MAPEAMENTO ###############################
+//##############################################################################################
+
+
 void controle_com_mapeamento(int encVal){
   digitalWrite(buzzer, LOW);
   if(encVal > 0 && encVal < 24000){
@@ -307,6 +327,7 @@ void setup()
   pinMode(buzzer, OUTPUT);
 
   led_stip.begin();
+  SerialBT.begin("Semreh"); //Bluetooth device name
 
   ESP32Encoder::useInternalWeakPullResistors = UP;
 
@@ -331,23 +352,17 @@ void setup()
     led_stip.setPixelColor(1, 0, 0, 0);
     led_stip.show();
   }
-
-  //Blynk.run();
   
 }
 bool bly = false;
-
-
 
 void loop()
 {
   led_stip.setPixelColor(0, 255, 0, 0);
   led_stip.show();
   ler_sensores();
-  //int encVal = ((encoder.getCount() + encoder2.getCount())/2);
-  Serial.print(encoder.getCount());
-  Serial.print(",");
-  Serial.println(encoder2.getCount());
+  int encVal = ((encoder.getCount() + encoder2.getCount())/2);
+  SerialBT.println(encVal);
   controle_sem_mapeamento();
   digitalWrite(buzzer, ler_sens_lat_esq());
   digitalWrite(buzzer, ler_sens_lat_dir());
