@@ -288,6 +288,16 @@ void controle_com_mapeamento(int encVal){
       }
   }
 
+void rampa_de_velocidade(uint32_t time) { // implementar a rampa por distancia ao invez de tempo
+
+  //adicionar condicional com sensor lateral esquerdo
+  for (int i = 0; i < 255 ; i++){
+    controle_motores(i, i);
+    delay(time/254);
+  }
+
+}
+
 int v = 0;
 
 void mapeamento(){
