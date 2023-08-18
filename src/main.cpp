@@ -64,34 +64,6 @@ void controle_motores(float vel_A, float vel_B)
   digitalWrite(in_esq2, LOW);
   analogWrite(pwmB,velesq);
 }
-void calcula_PID_R()
-{
-  
-  PR = erro_f;
-  DR = erro_f - erro_anterior;
-  PIDR = (KpR * PR) + (KdR * DR);
-  erro_anterior = erro_f;
-}
-void controle_motores_R(float vel_AR, float vel_BR){
-  velesqR = vel_AR + PIDR;
-  veldirR = vel_BR- PIDR;
-  if (velesqR < 15)
-  {
-    velesqR = 15;
-  }
-  
-  if (veldirR <15)
-  {
-    veldirR = 15;
-  }
-  digitalWrite(in_dir1, HIGH);
-  digitalWrite(in_dir2, LOW);
-  analogWrite(pwmA, velesqR);
-
-  digitalWrite(in_esq1, LOW);
-  digitalWrite(in_esq2, HIGH);
-  analogWrite(pwmB, veldirR);
-}
 int calculate_rpm()
 {
 
@@ -136,8 +108,8 @@ Range ranges[numRanges] = {
 };
 
 void calculaEControlePID_R(int leftSpeed, int rightSpeed) { //Implementar parametro de tipo de PID; reta, curva, curva longa
-    calcula_PID_R();
-    controle_motores_R(leftSpeed, rightSpeed);
+    calcula_PID();
+    controle_motores(leftSpeed, rightSpeed);
 }
 
 void controle_com_mapeamento2(int encVal) {
@@ -169,47 +141,47 @@ void controle_com_mapeamento(int encVal){
       }
       else if(encVal > 99000 && encVal < 103600){ //diagonal
         digitalWrite(buzzer, HIGH);
-        calcula_PID_R();
-        controle_motores_R(245, 245);
+        calcula_PID();
+        controle_motores(245, 245);
       }      else if(encVal > 109850 && encVal < 114600){ //antes reta media
         digitalWrite(buzzer, HIGH);
-        calcula_PID_R();
-        controle_motores_R(245, 245);
+        calcula_PID();
+        controle_motores(245, 245);
 
       }else if(encVal > 119600 && encVal < 137000){ //reta media
         digitalWrite(buzzer, HIGH);
-        calcula_PID_R();
-        controle_motores_R(255, 255);
+        calcula_PID();
+        controle_motores(255, 255);
       }
       else if(encVal > 144700 && encVal < 149000){ //reta vertical
         digitalWrite(buzzer, HIGH);
 
-        calcula_PID_R();
-        controle_motores_R(245, 245);
+        calcula_PID();
+        controle_motores(245, 245);
       }  
       else if(encVal > 178000 && encVal < 183300){ //reta 1 de 3
           digitalWrite(buzzer, HIGH);
 
-          calcula_PID_R();
-          controle_motores_R(240, 240);
+          calcula_PID();
+          controle_motores(240, 240);
       }
       else if(encVal > 190000 && encVal < 195400){ //reta 2 de 3
           digitalWrite(buzzer, HIGH);
 
-          calcula_PID_R();
-          controle_motores_R(240, 240);
+          calcula_PID();
+          controle_motores(240, 240);
       }
       else if(encVal > 202200 && encVal < 207900){ //reta 3 de 3
         digitalWrite(buzzer, HIGH);
 
-        calcula_PID_R();
-        controle_motores_R(240, 240);
+        calcula_PID();
+        controle_motores(240, 240);
       }
       else if(encVal > 221000 && encVal < 251000){ //retona
         digitalWrite(buzzer, HIGH);
 
-        calcula_PID_R();
-        controle_motores_R(255, 255);
+        calcula_PID();
+        controle_motores(255, 255);
       } 
       else if(encVal > 250800 && encVal < 280000){ //final
         calcula_PID();
