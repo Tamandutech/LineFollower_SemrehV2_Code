@@ -1,5 +1,5 @@
 <h1 align="center" style="color:white; background-color:black">LineFollower_SemrehV2_Code</h1>
-<h4 align="center">O codigo principal do robô Seguidor de Linha Semreh em sua 2° revisão, desenvolvido e projetado pela Tamandutech UFABC.</h4>
+<h4 align="center">O codigo principal do robô Seguidor de Linha "Semreh" em sua 2° revisão, desenvolvido e projetado pela Tamandutech UFABC.</h4>
 
 **Pinout**
 
