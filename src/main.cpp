@@ -11,12 +11,7 @@ ESP32Encoder encoder;
 ESP32Encoder encoder2;
 QTRSensors sArray;
 BluetoothSerial SerialBT;
-
-// How many NeoPixels are attached to the Arduino?
-#define LED_COUNT 2
-
-// Declare our NeoPixel strip object:
-Adafruit_NeoPixel led_stip(LED_COUNT, led, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel led_stip(LED_COUNT, led, NEO_GRB + NEO_KHZ800); // Declare our NeoPixel strip object
 
 float Ki = 0;
 float Kp = 0.0445;//0.04352
@@ -56,12 +51,12 @@ void controle_motores(float vel_A, float vel_B)
     veldir = 15;
   }
 
-  digitalWrite(in_dir1, HIGH);
-  digitalWrite(in_dir2, LOW);
+  digitalWrite(in_dir1,LOW);
+  digitalWrite(in_dir2,HIGH);
   analogWrite(pwmA,veldir);
 
-  digitalWrite(in_esq1, HIGH);
-  digitalWrite(in_esq2, LOW);
+  digitalWrite(in_esq1,LOW);
+  digitalWrite(in_esq2,HIGH);
   analogWrite(pwmB,velesq);
 }
 int calculate_rpm()

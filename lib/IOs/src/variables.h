@@ -30,6 +30,9 @@
 #define led 32
 #define buzzer 12
 
+// How many NeoPixels are attached to the Arduino?
+#define LED_COUNT 2
+
 const float pul_per_turn = 360;
 int count_enc_esq = 0;
 int count_enc_dir = 0;
