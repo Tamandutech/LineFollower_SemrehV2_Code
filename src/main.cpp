@@ -44,7 +44,6 @@ void calcula_PID()
 }
 void controle_motores(float vel_A, float vel_B)
 {
-  //Serial.println("controle motor");
   velesq = vel_A + PID;
   veldir = vel_B - PID;
   if (velesq < 15)
@@ -56,13 +55,14 @@ void controle_motores(float vel_A, float vel_B)
   {
     veldir = 15;
   }
+
   digitalWrite(in_dir1, HIGH);
   digitalWrite(in_dir2, LOW);
-  analogWrite(pwmA, velesq);
+  analogWrite(pwmA,veldir);
 
-  digitalWrite(in_esq1, LOW);
-  digitalWrite(in_esq2, HIGH);
-  analogWrite(pwmB, veldir);
+  digitalWrite(in_esq1, HIGH);
+  digitalWrite(in_esq2, LOW);
+  analogWrite(pwmB,velesq);
 }
 void calcula_PID_R()
 {
@@ -112,74 +112,9 @@ int calculate_rpm()
   
 }
 
-bool ler_sens_lat_esq()
-{
-  #define tempoDebounce 20
-
-  bool estadoSLatEsq;
-  static bool estadoSLatEsqAnt;
-  static bool estadoRet = true;
-  static unsigned long delaySenLat = 0;
-  int x = 0;
-  if((millis() - delaySenLat)> tempoDebounce){
-    x = analogRead(s_lat_esq);
-
-    if(x < 200){
-      estadoSLatEsq = true;     
-    }
-    else{
-      estadoSLatEsq = false;
-    }
-
-    if(estadoSLatEsq && (estadoSLatEsq != estadoSLatEsqAnt)){
-      estadoRet = !estadoRet;
-      delaySenLat = millis();
-    }
-
-    estadoSLatEsqAnt = estadoSLatEsq;
-    
-  }
-  return estadoSLatEsq;
-}
-
-
-bool ler_sens_lat_dir()
-{
-  #define tempoDebounce2 20
-
-  bool estadoSLatDir;
-  static bool estadoSLatDirAnt;
-  static bool estadoRetDir = true;
-  static unsigned long delaySenLatDir = 0;
-  int y = 0;
-  if((millis() - delaySenLatDir)> tempoDebounce2){
-    y = analogRead(s_lat_dir);
-    
-    if(y < 200){
-      estadoSLatDir = true;     
-    }
-    else{
-      estadoSLatDir = false;
-    }
-
-    if(estadoSLatDir && (estadoSLatDir != estadoSLatDirAnt)){
-      estadoRetDir = !estadoRetDir;
-      delaySenLatDir = millis();
-    }
-    estadoSLatDirAnt = estadoSLatDir;
-    
-  }
-  return estadoSLatDir;
-}
-
-void controle_sem_mapeamento(){
-
-        calcula_PID();
-        controle_motores(100,100);
-}
-
 //##############################################################################################
 //################ INICIO: NOVA PROPOSTA DE CONTROLE COM MAPEAMENTO ############################
+
 struct Range {
     int minValue;
     int maxValue;
@@ -219,12 +154,12 @@ void controle_com_mapeamento2(int encVal) {
         }
     }
     // Se nenhum intervalo for correspondido, executar ação padrão
-    controle_sem_mapeamento();
+    calcula_PID();
+    controle_motores(40,40);
 }
 
 //################ FIM: NOVA PROPOSTA DE CONTROLE COM MAPEAMENTO ###############################
 //##############################################################################################
-
 
 void controle_com_mapeamento(int encVal){
   digitalWrite(buzzer, LOW);
@@ -284,14 +219,15 @@ void controle_com_mapeamento(int encVal){
         digitalWrite(stby, LOW);
       }
       else{
-        controle_sem_mapeamento();
+        calcula_PID();
+        controle_motores(40,40);
       }
   }
 
 void rampa_de_velocidade(uint32_t time) { // implementar a rampa por distancia ao invez de tempo
 
   //adicionar condicional com sensor lateral esquerdo
-  for (int i = 0; i < 255 ; i++){
+  for (int i = 0; i < 100 ; i++){
     controle_motores(i, i);
     delay(time/254);
   }
@@ -300,26 +236,50 @@ void rampa_de_velocidade(uint32_t time) { // implementar a rampa por distancia a
 
 int v = 0;
 
-void mapeamento(){
-  timer_in = millis();
-
-  digitalWrite(buzzer, LOW);
-          
-  if(ler_sens_lat_dir() == true){  
-        if(timer_in - timer_prev3 >= 10){
-          v = (v+1);
-          Serial.print("Marca ");
-          Serial.print(v);
-          Serial.print(": ");
-          Serial.println((encoder.getCount() + encoder2.getCount())/2);
-          //Serial.println(timer_in);
-
-        }
-      digitalWrite(buzzer, HIGH);
-       timer_prev3 = timer_in;
-     }
+void ler_sens_lat_esq(void * parameter){
+  while (1) {
+    int inputValue = analogRead(s_lat_esq);
+    if (inputValue < 200) {
+      digitalWrite(buzzer, HIGH);  // Ligar o buzzer
+      vTaskDelay(pdMS_TO_TICKS(250));  // Manter o buzzer ligado por 500ms
+      digitalWrite(buzzer, LOW);  // Ligar o buzzer
+      vTaskDelay(pdMS_TO_TICKS(50));  // Manter o buzzer ligado por 500ms
+      digitalWrite(buzzer, HIGH);  // Ligar o buzzer
+      vTaskDelay(pdMS_TO_TICKS(250));  // Manter o buzzer ligado por 500ms
+      digitalWrite(buzzer, LOW);   // Desligar o buzzer
+      vTaskDelay(pdMS_TO_TICKS(50));  // Manter o buzzer ligado por 500ms
+      digitalWrite(buzzer, HIGH);   // Desligar o buzzer}
+      vTaskDelay(pdMS_TO_TICKS(500));  // Manter o buzzer ligado por 500ms
+      digitalWrite(buzzer, LOW);   // Desligar o buzzer}
     
+    // Pequeno atraso para evitar detecção repetida muito rápida
+    vTaskDelay(pdMS_TO_TICKS(20));  // Pausa de 100ms entre as verificações
+    }
+  }
 }
+
+void ler_sens_lat_dir(void * parameter){
+  while (1) {
+    int inputValue = analogRead(s_lat_dir);
+    if (inputValue < 200) {
+
+      SerialBT.print(encoder.getCount());
+      SerialBT.print(",");
+      SerialBT.println(encoder2.getCount());
+
+      led_stip.setPixelColor(1, 0, 0, 255);
+      led_stip.show();
+      digitalWrite(buzzer, HIGH);  // Ligar o buzzer
+      vTaskDelay(pdMS_TO_TICKS(200));  // Manter o buzzer ligado por 500ms
+      digitalWrite(buzzer, LOW);   // Desligar o buzzer
+      led_stip.setPixelColor(1, 0, 0, 0);
+      led_stip.show();
+    }
+    // Pequeno atraso para evitar detecção repetida muito rápida
+    vTaskDelay(pdMS_TO_TICKS(20));  // Pausa de 100ms entre as verificações
+  }
+}
+
 void setup()
 {
   Serial.begin(115200);
@@ -353,28 +313,26 @@ void setup()
   sArray.setSensorPins((const uint8_t[]){0, 1, 2, 3, 4, 5, 6, 7}, 8, (gpio_num_t)out_s_front, (gpio_num_t)in_s_front, (gpio_num_t)clk, (gpio_num_t)cs_s_front, 1350000, VSPI_HOST);
   sArray.setSamplesPerSensor(5);
 
+  led_stip.setPixelColor(0, 0, 255, 0);
+  led_stip.show();
+
   for (uint16_t i = 0; i < 300; i++)
   {
-    led_stip.setPixelColor(1, 0, 255, 0);
-    led_stip.show();
     sArray.calibrate();
     delay(20);
-    led_stip.setPixelColor(1, 0, 0, 0);
-    led_stip.show();
   }
   
+  xTaskCreate(ler_sens_lat_esq,"Sensor lat esq",1000,NULL,1,NULL);
+  xTaskCreate(ler_sens_lat_dir,"Sensor lat dir",1000,NULL,1,NULL);
+
 }
-bool bly = false;
 
 void loop()
 {
   led_stip.setPixelColor(0, 255, 0, 0);
   led_stip.show();
-  ler_sensores();
-  int encVal = ((encoder.getCount() + encoder2.getCount())/2);
-  SerialBT.println(encVal);
-  controle_sem_mapeamento();
-  digitalWrite(buzzer, ler_sens_lat_esq());
-  digitalWrite(buzzer, ler_sens_lat_dir());
-}
 
+  ler_sensores();
+  calcula_PID();
+  controle_motores(40,40);
+}
