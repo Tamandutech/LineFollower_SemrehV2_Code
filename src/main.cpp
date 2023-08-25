@@ -51,12 +51,12 @@ void controle_motores(float vel_A, float vel_B)
     veldir = 15;
   }
 
-  digitalWrite(in_dir1,LOW);
-  digitalWrite(in_dir2,HIGH);
+  digitalWrite(in_dir1,HIGH);
+  digitalWrite(in_dir2,LOW);
   analogWrite(pwmA,veldir);
 
-  digitalWrite(in_esq1,LOW);
-  digitalWrite(in_esq2,HIGH);
+  digitalWrite(in_esq1,HIGH);
+  digitalWrite(in_esq2,LOW);
   analogWrite(pwmB,velesq);
 }
 int calculate_rpm()
