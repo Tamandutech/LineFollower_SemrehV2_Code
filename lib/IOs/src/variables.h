@@ -11,7 +11,7 @@
 #define in_dir1	25
 #define in_dir2 21
 
-#define in_esq1 26
+#define in_esq1 26 // input motor esquerdo
 #define in_esq2 27
 
 #define stby 17
@@ -50,6 +50,15 @@ long int enc_dir_pul;
 
 float I = 0, P = 0, D = 0, PID = 0;
 float IR = 0, PR = 0, DR = 0, PIDR = 0;
+
+// Dados para integral
+int error1 = 0; 
+int error2 = 0;
+int error3 = 0;
+int error4 = 0;
+int error5 = 0;
+int error6 = 0;
+//////////////////////
 
 float velesq = 0, veldir = 0, velesqR = 0, veldirR = 0;
 float erro_sensores = 0, erro_anterior = 0;

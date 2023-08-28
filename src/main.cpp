@@ -13,9 +13,9 @@ QTRSensors sArray;
 BluetoothSerial SerialBT;
 Adafruit_NeoPixel led_stip(LED_COUNT, led, NEO_GRB + NEO_KHZ800); // Declare our NeoPixel strip object
 
-float Ki = 0;
-float Kp = 0.0445;//0.04352
-float Kd = 0.340; // 0.0992
+float Ki = 0; // 0.002 
+float Kp = 0.043;//0.04352
+float Kd = 0.25; // 0.0992
 
 float KiR = 0;
 float KpR = 0.035;//0.0392
@@ -31,32 +31,50 @@ void ler_sensores()
 }
 void calcula_PID()
 {
-  
   P = erro_f;
   D = erro_f - erro_anterior;
-  PID = (Kp * P) + (Kd * D);
+  I = error1 + error2 + error3 + error4 + error5 + error6;
+  error6 = error5;
+  error5 = error4;
+  error4 = error3;
+  error3 = error2;
+  error2 = error1;
+  error1 = P;
+  
+  PID = (Kp * P) + (Kd * D) + (Ki * I);
   erro_anterior = erro_f;
 }
 void controle_motores(float vel_A, float vel_B)
 {
   velesq = vel_A + PID;
   veldir = vel_B - PID;
-  if (velesq < 15)
-  {
-    velesq = 15;
-  }
-  
-  if (veldir <15)
-  {
-    veldir = 15;
-  }
 
-  digitalWrite(in_dir1,LOW);
-  digitalWrite(in_dir2,HIGH);
+  if(veldir>=0)
+  {
+    if(veldir > 255) veldir = 255;
+    digitalWrite(in_esq1,LOW);
+    digitalWrite(in_esq2,HIGH);
+  }
+  else
+  {
+    veldir = (-1) * veldir;
+    digitalWrite(in_esq1,HIGH);
+    digitalWrite(in_esq2,LOW);
+  }
   analogWrite(pwmA,veldir);
 
-  digitalWrite(in_esq1,LOW);
-  digitalWrite(in_esq2,HIGH);
+  if(velesq>=0)
+  {
+    if (velesq > 255) velesq = 255;
+    digitalWrite(in_dir1,LOW);
+    digitalWrite(in_dir2,HIGH);
+  }
+  else
+  {
+    velesq = (-1) * velesq;
+    digitalWrite(in_dir1,HIGH);
+    digitalWrite(in_dir2,LOW);
+  }
   analogWrite(pwmB,velesq);
 }
 int calculate_rpm()
@@ -74,7 +92,6 @@ int calculate_rpm()
   
 
   enc = (enc_esq_pul + enc_dir_pul) /2;
-  Serial.println(enc);
   return enc;
   
 }
@@ -206,17 +223,17 @@ int v = 0;
 void ler_sens_lat_esq(void * parameter){
   while (1) {
     int inputValue = analogRead(s_lat_esq);
-    if (inputValue < 200) {
+    if (inputValue < 2000) {
       digitalWrite(buzzer, HIGH);  // Ligar o buzzer
-      vTaskDelay(pdMS_TO_TICKS(250));  // Manter o buzzer ligado por 500ms
-      digitalWrite(buzzer, LOW);  // Ligar o buzzer
-      vTaskDelay(pdMS_TO_TICKS(50));  // Manter o buzzer ligado por 500ms
-      digitalWrite(buzzer, HIGH);  // Ligar o buzzer
-      vTaskDelay(pdMS_TO_TICKS(250));  // Manter o buzzer ligado por 500ms
-      digitalWrite(buzzer, LOW);   // Desligar o buzzer
-      vTaskDelay(pdMS_TO_TICKS(50));  // Manter o buzzer ligado por 500ms
-      digitalWrite(buzzer, HIGH);   // Desligar o buzzer}
-      vTaskDelay(pdMS_TO_TICKS(500));  // Manter o buzzer ligado por 500ms
+      // vTaskDelay(pdMS_TO_TICKS(250));  // Manter o buzzer ligado por 500ms
+      // digitalWrite(buzzer, LOW);  // Ligar o buzzer
+      // vTaskDelay(pdMS_TO_TICKS(50));  // Manter o buzzer ligado por 500ms
+      // digitalWrite(buzzer, HIGH);  // Ligar o buzzer
+      // vTaskDelay(pdMS_TO_TICKS(250));  // Manter o buzzer ligado por 500ms
+      // digitalWrite(buzzer, LOW);   // Desligar o buzzer
+      vTaskDelay(pdMS_TO_TICKS(100));  // Manter o buzzer ligado por 500ms
+      // digitalWrite(buzzer, HIGH);   // Desligar o buzzer}
+      // vTaskDelay(pdMS_TO_TICKS(500));  // Manter o buzzer ligado por 500ms
       digitalWrite(buzzer, LOW);   // Desligar o buzzer}
     
     // Pequeno atraso para evitar detecção repetida muito rápida
@@ -228,7 +245,7 @@ void ler_sens_lat_esq(void * parameter){
 void ler_sens_lat_dir(void * parameter){
   while (1) {
     int inputValue = analogRead(s_lat_dir);
-    if (inputValue < 200) {
+    if (inputValue < 2000) {
 
       SerialBT.print(encoder.getCount());
       SerialBT.print(",");
@@ -237,13 +254,13 @@ void ler_sens_lat_dir(void * parameter){
       led_stip.setPixelColor(1, 0, 0, 255);
       led_stip.show();
       digitalWrite(buzzer, HIGH);  // Ligar o buzzer
-      vTaskDelay(pdMS_TO_TICKS(200));  // Manter o buzzer ligado por 500ms
+      vTaskDelay(pdMS_TO_TICKS(100));  // Manter o buzzer ligado por 100ms
       digitalWrite(buzzer, LOW);   // Desligar o buzzer
       led_stip.setPixelColor(1, 0, 0, 0);
       led_stip.show();
     }
     // Pequeno atraso para evitar detecção repetida muito rápida
-    vTaskDelay(pdMS_TO_TICKS(20));  // Pausa de 100ms entre as verificações
+    vTaskDelay(pdMS_TO_TICKS(20));  // Pausa de 20ms entre as verificações
   }
 }
 
@@ -301,5 +318,5 @@ void loop()
 
   ler_sensores();
   calcula_PID();
-  controle_motores(40,40);
+  controle_motores(100,100);
 }
