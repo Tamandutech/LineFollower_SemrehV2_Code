@@ -5,20 +5,18 @@
 #include <Adafruit_NeoPixel.h>
 #include <BluetoothSerial.h>
 
-int enc = 0;
-
 ESP32Encoder encoder;
 ESP32Encoder encoder2;
 QTRSensors sArray;
 BluetoothSerial SerialBT;
 Adafruit_NeoPixel led_stip(LED_COUNT, led, NEO_GRB + NEO_KHZ800); // Declare our NeoPixel strip object
 
-float Ki = 0;
-float Kp = 0.0445;//0.04352
-float Kd = 0.340; // 0.0992
+float Ki = 0; // 0.002 
+float Kp = 0.043; // 0.04352
+float Kd = 0.25; // 0.0992
 
 float KiR = 0;
-float KpR = 0.035;//0.0392
+float KpR = 0.035; // 0.0392
 float KdR = 0.0899; // 0.097
 
 void ler_sensores()
@@ -31,52 +29,51 @@ void ler_sensores()
 }
 void calcula_PID()
 {
-  
   P = erro_f;
   D = erro_f - erro_anterior;
-  PID = (Kp * P) + (Kd * D);
+  I = error1 + error2 + error3 + error4 + error5 + error6;
+  error6 = error5;
+  error5 = error4;
+  error4 = error3;
+  error3 = error2;
+  error2 = error1;
+  error1 = P;
+  
+  PID = (Kp * P) + (Kd * D) + (Ki * I);
   erro_anterior = erro_f;
 }
 void controle_motores(float vel_A, float vel_B)
 {
   velesq = vel_A + PID;
   veldir = vel_B - PID;
-  if (velesq < 15)
+
+  if(veldir>=0)
   {
-    velesq = 15;
+    if(veldir > 255) veldir = 255;
+    digitalWrite(in_dir1,LOW);
+    digitalWrite(in_dir2,HIGH);
   }
-  
-  if (veldir <15)
+  else
   {
-    veldir = 15;
+    veldir = (-1) * veldir;
+    digitalWrite(in_dir1,HIGH);
+    digitalWrite(in_dir2,LOW);
   }
+  analogWrite(pwmB,veldir);
 
-  digitalWrite(in_dir1,HIGH);
-  digitalWrite(in_dir2,LOW);
-  analogWrite(pwmA,veldir);
-
-  digitalWrite(in_esq1,HIGH);
-  digitalWrite(in_esq2,LOW);
-  analogWrite(pwmB,velesq);
-}
-int calculate_rpm()
-{
-
-  enc_esq_pul = encoder.getCount() - pul_prev_eq;   // delta s
-  enc_dir_pul = encoder2.getCount() - pul_prev_dir; // delta s
-
-  pul_prev_eq = encoder.getCount();
-  pul_prev_dir = encoder2.getCount();
-
-  // Pulses multiplied by 100 because interrupt every 10milliseconds (Convert to pulses per second)
-  // Divide by pulses per turn of output shaft.
-  // Multiply by 60 to go from seconds to minutes
-  
-
-  enc = (enc_esq_pul + enc_dir_pul) /2;
-  Serial.println(enc);
-  return enc;
-  
+  if(velesq>=0)
+  {
+    if (velesq > 255) velesq = 255;
+    digitalWrite(in_esq1,LOW);
+    digitalWrite(in_esq2,HIGH);
+  }
+  else
+  {
+    velesq = (-1) * velesq;
+    digitalWrite(in_esq1,HIGH);
+    digitalWrite(in_esq2,LOW);
+  }
+  analogWrite(pwmA,velesq);
 }
 
 //##############################################################################################
@@ -102,7 +99,7 @@ Range ranges[numRanges] = {
     {275000, INT_MAX, 120, 120}   // final
 };
 
-void calculaEControlePID_R(int leftSpeed, int rightSpeed) { //Implementar parametro de tipo de PID; reta, curva, curva longa
+void calculaEControlePID(int leftSpeed, int rightSpeed) { //Implementar parametro de tipo de PID; reta, curva, curva longa
     calcula_PID();
     controle_motores(leftSpeed, rightSpeed);
 }
@@ -112,7 +109,7 @@ void controle_com_mapeamento2(int encVal) {
     for (int i = 0; i < numRanges; ++i) {
         if (encVal > ranges[i].minValue && encVal < ranges[i].maxValue) {
 
-            calculaEControlePID_R(ranges[i].leftMotorSpeed, ranges[i].rightMotorSpeed);
+            calculaEControlePID(ranges[i].leftMotorSpeed, ranges[i].rightMotorSpeed);
 
             if (i > numRanges-1) {
                 digitalWrite(stby, LOW);
@@ -201,22 +198,20 @@ void rampa_de_velocidade(uint32_t time) { // implementar a rampa por distancia a
 
 }
 
-int v = 0;
-
 void ler_sens_lat_esq(void * parameter){
   while (1) {
     int inputValue = analogRead(s_lat_esq);
-    if (inputValue < 200) {
+    if (inputValue < 2000) {
       digitalWrite(buzzer, HIGH);  // Ligar o buzzer
-      vTaskDelay(pdMS_TO_TICKS(250));  // Manter o buzzer ligado por 500ms
-      digitalWrite(buzzer, LOW);  // Ligar o buzzer
-      vTaskDelay(pdMS_TO_TICKS(50));  // Manter o buzzer ligado por 500ms
-      digitalWrite(buzzer, HIGH);  // Ligar o buzzer
-      vTaskDelay(pdMS_TO_TICKS(250));  // Manter o buzzer ligado por 500ms
-      digitalWrite(buzzer, LOW);   // Desligar o buzzer
-      vTaskDelay(pdMS_TO_TICKS(50));  // Manter o buzzer ligado por 500ms
-      digitalWrite(buzzer, HIGH);   // Desligar o buzzer}
-      vTaskDelay(pdMS_TO_TICKS(500));  // Manter o buzzer ligado por 500ms
+      // vTaskDelay(pdMS_TO_TICKS(250));  // Manter o buzzer ligado por 500ms
+      // digitalWrite(buzzer, LOW);  // Ligar o buzzer
+      // vTaskDelay(pdMS_TO_TICKS(50));  // Manter o buzzer ligado por 500ms
+      // digitalWrite(buzzer, HIGH);  // Ligar o buzzer
+      // vTaskDelay(pdMS_TO_TICKS(250));  // Manter o buzzer ligado por 500ms
+      // digitalWrite(buzzer, LOW);   // Desligar o buzzer
+      vTaskDelay(pdMS_TO_TICKS(100));  // Manter o buzzer ligado por 500ms
+      // digitalWrite(buzzer, HIGH);   // Desligar o buzzer}
+      // vTaskDelay(pdMS_TO_TICKS(500));  // Manter o buzzer ligado por 500ms
       digitalWrite(buzzer, LOW);   // Desligar o buzzer}
     
     // Pequeno atraso para evitar detecção repetida muito rápida
@@ -228,7 +223,7 @@ void ler_sens_lat_esq(void * parameter){
 void ler_sens_lat_dir(void * parameter){
   while (1) {
     int inputValue = analogRead(s_lat_dir);
-    if (inputValue < 200) {
+    if (inputValue < 2000) {
 
       SerialBT.print(encoder.getCount());
       SerialBT.print(",");
@@ -237,13 +232,13 @@ void ler_sens_lat_dir(void * parameter){
       led_stip.setPixelColor(1, 0, 0, 255);
       led_stip.show();
       digitalWrite(buzzer, HIGH);  // Ligar o buzzer
-      vTaskDelay(pdMS_TO_TICKS(200));  // Manter o buzzer ligado por 500ms
+      vTaskDelay(pdMS_TO_TICKS(100));  // Manter o buzzer ligado por 100ms
       digitalWrite(buzzer, LOW);   // Desligar o buzzer
       led_stip.setPixelColor(1, 0, 0, 0);
       led_stip.show();
     }
     // Pequeno atraso para evitar detecção repetida muito rápida
-    vTaskDelay(pdMS_TO_TICKS(20));  // Pausa de 100ms entre as verificações
+    vTaskDelay(pdMS_TO_TICKS(20));  // Pausa de 20ms entre as verificações
   }
 }
 
@@ -251,10 +246,10 @@ void setup()
 {
   Serial.begin(115200);
 
-  pinMode(in_dir1, OUTPUT);
-  pinMode(in_dir2, OUTPUT);
   pinMode(in_esq1, OUTPUT);
   pinMode(in_esq2, OUTPUT);
+  pinMode(in_dir1, OUTPUT);
+  pinMode(in_dir2, OUTPUT);
   pinMode(pwmA, OUTPUT);
   pinMode(pwmB, OUTPUT);
   pinMode(stby, OUTPUT);
@@ -301,5 +296,5 @@ void loop()
 
   ler_sensores();
   calcula_PID();
-  controle_motores(40,40);
+  controle_motores(100,100);
 }
