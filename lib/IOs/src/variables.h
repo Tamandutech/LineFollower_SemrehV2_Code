@@ -1,71 +1,46 @@
-//ADC_sensores_frontais
+//ADC sensores frontais
 #define out_s_front 19
 #define clk 18
 #define in_s_front 22
 #define cs_s_front 23
 
-//driver_motor
-#define pwmA 14
-#define pwmB 13
+//driver motor
+#define pwmA 13 // Pino PWM do motor esquerdo
+#define pwmB 14 // Pino PWM do motor direito
 
-#define in_dir1	25
-#define in_dir2 21
+#define in_esq1	25 // Pino input1 motor esquerdo
+#define in_esq2 21 // Pino input2 motor esquerdo
 
-#define in_esq1 26 // input motor esquerdo
-#define in_esq2 27
+#define in_dir1 26 // Pino input1 motor direito
+#define in_dir2 27 // Pino input2 motor direito
 
-#define stby 17
+#define stby 17 // Pino stand-by dos motores
 
-//sensores_laterais
-#define s_lat_esq 39
-#define s_lat_dir 33
+//Sensores laterais
+#define s_lat_esq 39 // Pino sensor lateral esquerdo
+#define s_lat_dir 33 // Pino sensor lateral direito
 
-//encoder
-#define enc_eq_A 34
-#define enc_eq_B 35
-#define enc_dir_A 16
-#define enc_dir_B 4
+//Encoder
+#define enc_eq_A 34 // Pino inputA encoder esquerdo
+#define enc_eq_B 35 // Pino inputB encoder esquerdo
+#define enc_dir_A 16 // Pino inputA encoder direito
+#define enc_dir_B 4 // Pino inputB encoder direito
 
-//Alerts
-#define led 32
-#define buzzer 12
+//Alertas
+#define led 32 // Pino dos LEDs
+#define buzzer 12 // Pino buzzer
 
-// How many NeoPixels are attached to the Arduino?
-#define LED_COUNT 2
+//Numero de LEDs NeoPixels na placa
+#define LED_COUNT 2 // Numero de LEDs
 
-const float pul_per_turn = 360;
-int count_enc_esq = 0;
-int count_enc_dir = 0;
-int rpm_me = 0;
-int rpm_md = 0;
+//Valores do PID
+float I = 0, P = 0, D = 0; // Valores de ganho do PID
+float PID = 0; // Valor do ganho do PID total
 
-int timer_in = 0;
-int timer_prev = 0;
-int timer_prev3 = 0;
-long int pul_prev_eq = 0;
-long int pul_prev_dir = 0;
-long int enc_esq_pul;
-long int enc_dir_pul;
+//Dados para integral
+int error1=0, error2=0, error3=0, error4=0, error5=0, error6=0; // Erros para o calculo da integral
 
-
-float I = 0, P = 0, D = 0, PID = 0;
-float IR = 0, PR = 0, DR = 0, PIDR = 0;
-
-// Dados para integral
-int error1 = 0; 
-int error2 = 0;
-int error3 = 0;
-int error4 = 0;
-int error5 = 0;
-int error6 = 0;
-//////////////////////
-
-float velesq = 0, veldir = 0, velesqR = 0, veldirR = 0;
-float erro_sensores = 0, erro_anterior = 0;
-float erro_f = 0;
-int linha_l = 0;
-int timer_prev2 = 0;
-int timer_prev4 = 0;
-
-
-
+float velesq = 0, veldir = 0; // Valor de PWM do motor
+float erro_sensores = 0; // Erro dos sensores (-3500 < x < 3500)
+float erro_anterior = 0; // Erro anterior dos sensores (-3500 < x < 3500)
+float erro_f = 0; // Erro dos sensores (-3500 < x < 3500)
