@@ -202,16 +202,8 @@ void ler_sens_lat_esq(void * parameter){
   while (1) {
     int inputValue = analogRead(s_lat_esq);
     if (inputValue < 2000) {
-      digitalWrite(buzzer, HIGH);  // Ligar o buzzer
-      // vTaskDelay(pdMS_TO_TICKS(250));  // Manter o buzzer ligado por 500ms
-      // digitalWrite(buzzer, LOW);  // Ligar o buzzer
-      // vTaskDelay(pdMS_TO_TICKS(50));  // Manter o buzzer ligado por 500ms
-      // digitalWrite(buzzer, HIGH);  // Ligar o buzzer
-      // vTaskDelay(pdMS_TO_TICKS(250));  // Manter o buzzer ligado por 500ms
-      // digitalWrite(buzzer, LOW);   // Desligar o buzzer
-      vTaskDelay(pdMS_TO_TICKS(100));  // Manter o buzzer ligado por 500ms
-      // digitalWrite(buzzer, HIGH);   // Desligar o buzzer}
-      // vTaskDelay(pdMS_TO_TICKS(500));  // Manter o buzzer ligado por 500ms
+      digitalWrite(buzzer, HIGH);
+      vTaskDelay(pdMS_TO_TICKS(1000));  // Manter o buzzer ligado por 1000ms
       digitalWrite(buzzer, LOW);   // Desligar o buzzer}
     
     // Pequeno atraso para evitar detecção repetida muito rápida
@@ -273,7 +265,7 @@ void setup()
 
   sArray.setTypeMCP3008();
   sArray.setSensorPins((const uint8_t[]){0, 1, 2, 3, 4, 5, 6, 7}, 8, (gpio_num_t)out_s_front, (gpio_num_t)in_s_front, (gpio_num_t)clk, (gpio_num_t)cs_s_front, 1350000, VSPI_HOST);
-  sArray.setSamplesPerSensor(5);
+  sArray.setSamplesPerSensor(5); // VERIFICARRR
 
   led_stip.setPixelColor(0, 0, 255, 0);
   led_stip.show();
@@ -284,8 +276,8 @@ void setup()
     delay(20);
   }
   
-  xTaskCreate(ler_sens_lat_esq,"Sensor lat esq",1000,NULL,1,NULL);
-  xTaskCreate(ler_sens_lat_dir,"Sensor lat dir",1000,NULL,1,NULL);
+  xTaskCreatePinnedToCore(ler_sens_lat_esq,"Sensor lat esq",1000,NULL,1,NULL,PRO_CPU_NUM);
+  xTaskCreatePinnedToCore(ler_sens_lat_dir,"Sensor lat dir",1000,NULL,1,NULL,PRO_CPU_NUM);
 
 }
 
