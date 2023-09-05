@@ -27,7 +27,7 @@ void ler_sensores()
   erro_f = -1 * erro_sensores;
  
 }
-void calcula_PID()
+void calcula_PID(float KpParam, float KdParam, float KiParam)
 {
   P = erro_f;
   D = erro_f - erro_anterior;
@@ -39,7 +39,7 @@ void calcula_PID()
   error2 = error1;
   error1 = P;
   
-  PID = (Kp * P) + (Kd * D) + (Ki * I);
+  PID = (KpParam * P) + (KdParam * D) + (KiParam * I);
   erro_anterior = erro_f;
 }
 void controle_motores(float vel_A, float vel_B)
@@ -100,7 +100,7 @@ Range ranges[numRanges] = {
 };
 
 void calculaEControlePID(int leftSpeed, int rightSpeed) { //Implementar parametro de tipo de PID; reta, curva, curva longa
-    calcula_PID();
+    calcula_PID(Kp,Kd,Ki);
     controle_motores(leftSpeed, rightSpeed);
 }
 
@@ -118,7 +118,7 @@ void controle_com_mapeamento2(int encVal) {
         }
     }
     // Se nenhum intervalo for correspondido, executar ação padrão
-    calcula_PID();
+    calcula_PID(Kp,Kd,Ki);
     controle_motores(40,40);
 }
 
@@ -126,66 +126,25 @@ void controle_com_mapeamento2(int encVal) {
 //##############################################################################################
 
 void controle_com_mapeamento(int encVal){
-  digitalWrite(buzzer, LOW);
-  if(encVal > 0 && encVal < 24000){
-        calcula_PID();
-        controle_motores(135,135);
-      }
-      else if(encVal > 99000 && encVal < 103600){ //diagonal
-        digitalWrite(buzzer, HIGH);
-        calcula_PID();
-        controle_motores(245, 245);
-      }      else if(encVal > 109850 && encVal < 114600){ //antes reta media
-        digitalWrite(buzzer, HIGH);
-        calcula_PID();
-        controle_motores(245, 245);
-
-      }else if(encVal > 119600 && encVal < 137000){ //reta media
-        digitalWrite(buzzer, HIGH);
-        calcula_PID();
-        controle_motores(255, 255);
-      }
-      else if(encVal > 144700 && encVal < 149000){ //reta vertical
-        digitalWrite(buzzer, HIGH);
-
-        calcula_PID();
-        controle_motores(245, 245);
-      }  
-      else if(encVal > 178000 && encVal < 183300){ //reta 1 de 3
-          digitalWrite(buzzer, HIGH);
-
-          calcula_PID();
-          controle_motores(240, 240);
-      }
-      else if(encVal > 190000 && encVal < 195400){ //reta 2 de 3
-          digitalWrite(buzzer, HIGH);
-
-          calcula_PID();
-          controle_motores(240, 240);
-      }
-      else if(encVal > 202200 && encVal < 207900){ //reta 3 de 3
-        digitalWrite(buzzer, HIGH);
-
-        calcula_PID();
-        controle_motores(240, 240);
-      }
-      else if(encVal > 221000 && encVal < 251000){ //retona
-        digitalWrite(buzzer, HIGH);
-
-        calcula_PID();
-        controle_motores(255, 255);
-      } 
-      else if(encVal > 250800 && encVal < 280000){ //final
-        calcula_PID();
-        controle_motores(120,120);
-      }
-      else if(encVal > 275000){
-        digitalWrite(stby, LOW);
-      }
-      else{
-        calcula_PID();
-        controle_motores(40,40);
-      }
+  if(encVal > 0 && encVal <= 29000){
+    calcula_PID(Kp,Kd,Ki);
+    controle_motores(100,100);
+  }
+  else if(encVal > 29000 && encVal <= 30000){
+    calcula_PID(KpR,KdR,KiR);
+    controle_motores(245, 245);
+  }
+  else if(encVal > 30000 && encVal <= 33000){
+    calcula_PID(Kp,Kd,Ki);
+    controle_motores(100, 100);
+  }
+  else if(encVal > 33000){
+    digitalWrite(stby, LOW);
+  }
+  else{
+    calcula_PID(Kp,Kd,Ki);
+    controle_motores(40,40);
+  }
   }
 
 void rampa_de_velocidade(uint32_t time) { // implementar a rampa por distancia ao invez de tempo
@@ -202,24 +161,11 @@ void ler_sens_lat_esq(void * parameter){
   while (1) {
     int inputValue = analogRead(s_lat_esq);
     if (inputValue < 2000) {
-      digitalWrite(buzzer, HIGH);
-      vTaskDelay(pdMS_TO_TICKS(1000));  // Manter o buzzer ligado por 1000ms
-      digitalWrite(buzzer, LOW);   // Desligar o buzzer}
-    
-    // Pequeno atraso para evitar detecção repetida muito rápida
-    vTaskDelay(pdMS_TO_TICKS(20));  // Pausa de 100ms entre as verificações
-    }
-  }
-}
-
-void ler_sens_lat_dir(void * parameter){
-  while (1) {
-    int inputValue = analogRead(s_lat_dir);
-    if (inputValue < 2000) {
-
       SerialBT.print(encoder.getCount());
       SerialBT.print(",");
-      SerialBT.println(encoder2.getCount());
+      SerialBT.print(encoder2.getCount());
+      SerialBT.print(";");
+      SerialBT.println((encoder.getCount()+encoder2.getCount())/2);
 
       led_stip.setPixelColor(1, 0, 0, 255);
       led_stip.show();
@@ -230,7 +176,21 @@ void ler_sens_lat_dir(void * parameter){
       led_stip.show();
     }
     // Pequeno atraso para evitar detecção repetida muito rápida
-    vTaskDelay(pdMS_TO_TICKS(20));  // Pausa de 20ms entre as verificações
+    vTaskDelay(pdMS_TO_TICKS(5));  // Pausa de 5ms entre as verificações
+  }
+}
+
+void ler_sens_lat_dir(void * parameter){
+  while (1) {
+    int inputValue = analogRead(s_lat_dir);
+    if (inputValue < 2000) {
+      SerialBT.println("INICIO/FIM");
+      digitalWrite(buzzer, HIGH);
+      vTaskDelay(pdMS_TO_TICKS(100));  // Manter o buzzer ligado por 100ms
+      digitalWrite(buzzer, LOW);   // Desligar o buzzer
+    }
+    // Pequeno atraso para evitar detecção repetida muito rápida
+    vTaskDelay(pdMS_TO_TICKS(5));  // Pausa de 20ms entre as verificações
   }
 }
 
@@ -265,7 +225,7 @@ void setup()
 
   sArray.setTypeMCP3008();
   sArray.setSensorPins((const uint8_t[]){0, 1, 2, 3, 4, 5, 6, 7}, 8, (gpio_num_t)out_s_front, (gpio_num_t)in_s_front, (gpio_num_t)clk, (gpio_num_t)cs_s_front, 1350000, VSPI_HOST);
-  sArray.setSamplesPerSensor(5); // VERIFICARRR
+  sArray.setSamplesPerSensor(5); // VERIFICAR SE MUDAR ESSE PARAMETRO MELHORA A LEITURA, QUANTO MAIOR O NUMERO MAIS LENTA A LEITURA POREM MAIS PRECISA
 
   led_stip.setPixelColor(0, 0, 255, 0);
   led_stip.show();
@@ -276,17 +236,26 @@ void setup()
     delay(20);
   }
   
-  xTaskCreatePinnedToCore(ler_sens_lat_esq,"Sensor lat esq",1000,NULL,1,NULL,PRO_CPU_NUM);
-  xTaskCreatePinnedToCore(ler_sens_lat_dir,"Sensor lat dir",1000,NULL,1,NULL,PRO_CPU_NUM);
+  xTaskCreatePinnedToCore(ler_sens_lat_esq,"Sensor lat esq",4000,NULL,1,NULL,PRO_CPU_NUM);
+  //xTaskCreatePinnedToCore(ler_sens_lat_dir,"Sensor lat dir",4000,NULL,1,NULL,PRO_CPU_NUM);
 
 }
-
+int flag = 0;
 void loop()
 {
+  int inputValue = analogRead(s_lat_dir);
+  if (inputValue < 2000 && flag==0) {
+    SerialBT.println("INICIO/FIM");
+    digitalWrite(buzzer, HIGH);
+    encoder2.clearCount();
+    encoder.clearCount();
+    flag = 1;
+  }
   led_stip.setPixelColor(0, 255, 0, 0);
   led_stip.show();
 
   ler_sensores();
-  calcula_PID();
-  controle_motores(100,100);
+  controle_com_mapeamento((encoder.getCount()+encoder2.getCount())/2);
+  //calcula_PID(Kp,Kd,Ki);
+  //controle_motores(100,100);
 }
