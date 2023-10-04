@@ -5,6 +5,8 @@
 #include <Adafruit_NeoPixel.h>
 #include <BluetoothSerial.h>
 
+#include "bluetooth.h"
+
 ESP32Encoder encoder;
 ESP32Encoder encoder2;
 QTRSensors sArray;
@@ -15,32 +17,63 @@ float Ki = 0; // 0.002
 float Kp = 0.043; // 0.04352
 float Kd = 0.25; // 0.0992
 
+float Kp_enc = 0.015; // 0.09
+float Kd_enc = 0; // 0.0001
+float Ki_enc = 0.02; // 0.1
+
 float KiR = 0;
 float KpR = 0.035; // 0.0392
 float KdR = 0.0899; // 0.097
 
+float erro_encoders;
+float velocidadeMedReal;
+float erro_anterior_encoders;
+
+float P_enc;
+float D_enc;
+float I_enc;
+float PID_enc;
+
+int32_t velocidadeD;
+int32_t velocidadeE;
+int32_t velocidadeMed;
+
 void ler_sensores()
 {
-
   uint16_t sArraychannels[sArray.getSensorCount()];
-  erro_sensores = sArray.readLineWhite(sArraychannels) - 3500;
-  erro_f = -1 * erro_sensores;
- 
+  erro_sensores = 3500 - sArray.readLineWhite(sArraychannels);
 }
 void calcula_PID(float KpParam, float KdParam, float KiParam)
 {
-  P = erro_f;
-  D = erro_f - erro_anterior;
-  I = error1 + error2 + error3 + error4 + error5 + error6;
-  error6 = error5;
-  error5 = error4;
-  error4 = error3;
-  error3 = error2;
+  P = erro_sensores;
+  D = erro_sensores - erro_anterior;
+  I = error1 + error2;// + error3;// + error4 + error5 + error6;
+  //error6 = error5;
+  //error5 = error4;
+  //error4 = error3;
+  //error3 = error2;
   error2 = error1;
   error1 = P;
   
   PID = (KpParam * P) + (KdParam * D) + (KiParam * I);
-  erro_anterior = erro_f;
+  erro_anterior = erro_sensores;
+}
+
+
+void calcula_PID_translacional(float KpParam, float KdParam, float KiParam)
+{
+  P_enc = erro_encoders;
+  D_enc = erro_encoders - erro_anterior_encoders;
+  I_enc = error1 + error2; //+ error3 + error4 + error5 + error6;
+  //error6 = error5;
+  //error5 = error4;
+  //error4 = error3;
+  //error3 = error2;
+  error2 = error1;
+  error1 = P_enc;
+  
+  PID_enc = (KpParam * P_enc) + (KdParam * D_enc) + (KiParam * I_enc);
+  erro_anterior_encoders = erro_encoders;
 }
 void controle_motores(float vel_A, float vel_B)
 {
@@ -49,7 +82,6 @@ void controle_motores(float vel_A, float vel_B)
 
   if(veldir>=0)
   {
-    if(veldir > 255) veldir = 255;
     digitalWrite(in_dir1,LOW);
     digitalWrite(in_dir2,HIGH);
   }
@@ -59,11 +91,11 @@ void controle_motores(float vel_A, float vel_B)
     digitalWrite(in_dir1,HIGH);
     digitalWrite(in_dir2,LOW);
   }
+  if(veldir > 255) veldir = 255;
   analogWrite(pwmB,veldir);
 
   if(velesq>=0)
   {
-    if (velesq > 255) velesq = 255;
     digitalWrite(in_esq1,LOW);
     digitalWrite(in_esq2,HIGH);
   }
@@ -73,6 +105,7 @@ void controle_motores(float vel_A, float vel_B)
     digitalWrite(in_esq1,HIGH);
     digitalWrite(in_esq2,LOW);
   }
+  if (velesq > 255) velesq = 255;
   analogWrite(pwmA,velesq);
 }
 
@@ -145,16 +178,6 @@ void controle_com_mapeamento(int encVal){
     calcula_PID(Kp,Kd,Ki);
     controle_motores(40,40);
   }
-  }
-
-void rampa_de_velocidade(uint32_t time) { // implementar a rampa por distancia ao invez de tempo
-
-  //adicionar condicional com sensor lateral esquerdo
-  for (int i = 0; i < 100 ; i++){
-    controle_motores(i, i);
-    delay(time/254);
-  }
-
 }
 
 void ler_sens_lat_esq(void * parameter){
@@ -177,6 +200,46 @@ void ler_sens_lat_esq(void * parameter){
     }
     // Pequeno atraso para evitar detecção repetida muito rápida
     vTaskDelay(pdMS_TO_TICKS(5));  // Pausa de 5ms entre as verificações
+  }
+}
+
+void ler_velocidade(void * parameter){
+  while (1) {
+    velocidadeD = (628 * encoder.getCount());
+    velocidadeE = (628 * encoder2.getCount());
+    velocidadeMed = (velocidadeD + velocidadeE)/2;
+
+    erro_encoders = 5000 - velocidadeMed;
+    
+    encoder.clearCount();
+    encoder2.clearCount();
+
+    // Pequeno atraso para evitar detecção repetida muito rápida
+    vTaskDelay(pdMS_TO_TICKS(5));  // Pausa de 10ms entre as verificações
+  }
+}
+
+void envia_velocidade(void * parameter){
+  while (1) {
+    char buffer[60];
+    //velocidadeMedReal = (velocidadeMed * 0.0001 );
+    int j = snprintf(buffer, 60, ";%5d\t;%5d\t;%3.2f\t;%5d;", velocidadeD, velocidadeE, PID_enc, velocidadeMed);
+    SerialBT.println(buffer);
+
+    // Pequeno atraso para evitar detecção repetida muito rápida
+    vTaskDelay(pdMS_TO_TICKS(10));  // Pausa de 20ms entre as verificações
+  }
+}
+
+void envia_velocidade_serial(void * parameter){
+  while (1) {
+    char buffer[60];
+    //velocidadeMedReal = (velocidadeMed * 0.0001 );
+    int j = snprintf(buffer, 60, ";%5d\t;%5d\t;%3.2f\t;%5d;", velocidadeD, velocidadeE, PID_enc, velocidadeMed);
+    Serial.println(buffer);
+
+    // Pequeno atraso para evitar detecção repetida muito rápida
+    vTaskDelay(pdMS_TO_TICKS(5));  // Pausa de 20ms entre as verificações
   }
 }
 
@@ -215,8 +278,8 @@ void setup()
 
   ESP32Encoder::useInternalWeakPullResistors = UP;
 
-  encoder.attachFullQuad(enc_eq_B, enc_eq_A);
-  encoder2.attachFullQuad(enc_dir_A, enc_dir_B);
+  encoder.attachFullQuad(enc_eq_A,enc_eq_B);
+  encoder2.attachFullQuad(enc_dir_B,enc_dir_A);
 
   digitalWrite(stby, HIGH);
 
@@ -236,8 +299,10 @@ void setup()
     delay(20);
   }
   
-  xTaskCreatePinnedToCore(ler_sens_lat_esq,"Sensor lat esq",4000,NULL,1,NULL,PRO_CPU_NUM);
+  //xTaskCreatePinnedToCore(ler_sens_lat_esq,"Sensor lat esq",4000,NULL,1,NULL,PRO_CPU_NUM);
   //xTaskCreatePinnedToCore(ler_sens_lat_dir,"Sensor lat dir",4000,NULL,1,NULL,PRO_CPU_NUM);
+  xTaskCreatePinnedToCore(ler_velocidade,"le velocidade",4000,NULL,1,NULL,APP_CPU_NUM);
+  xTaskCreatePinnedToCore(envia_velocidade_serial,"envia velocidade",4000,NULL,1,NULL,PRO_CPU_NUM);
 
 }
 int flag = 0;
@@ -246,7 +311,7 @@ void loop()
   int inputValue = analogRead(s_lat_dir);
   if (inputValue < 2000 && flag==0) {
     SerialBT.println("INICIO/FIM");
-    digitalWrite(buzzer, HIGH);
+    //digitalWrite(buzzer, HIGH);
     encoder2.clearCount();
     encoder.clearCount();
     flag = 1;
@@ -255,7 +320,10 @@ void loop()
   led_stip.show();
 
   ler_sensores();
-  controle_com_mapeamento((encoder.getCount()+encoder2.getCount())/2);
-  //calcula_PID(Kp,Kd,Ki);
-  //controle_motores(100,100);
+  //controle_com_mapeamento((encoder.getCount()+encoder2.getCount())/2);
+
+  calcula_PID(Kp,Kd,Ki);
+  calcula_PID_translacional(Kp_enc,Kd_enc,Ki_enc);
+  
+  controle_motores(PID_enc ,PID_enc);
 }
