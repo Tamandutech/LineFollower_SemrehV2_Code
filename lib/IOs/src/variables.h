@@ -8,8 +8,8 @@
 #define pwmA 13 // Pino PWM do motor esquerdo
 #define pwmB 14 // Pino PWM do motor direito
 
-#define in_esq1	25 // Pino input1 motor esquerdo
-#define in_esq2 21 // Pino input2 motor esquerdo
+#define in_esq1	21 // Pino input1 motor esquerdo
+#define in_esq2 25 // Pino input2 motor esquerdo
 
 #define in_dir1 26 // Pino input1 motor direito
 #define in_dir2 27 // Pino input2 motor direito

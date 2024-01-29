@@ -209,7 +209,7 @@ void ler_velocidade(void * parameter){
     velocidadeE = (628 * encoder2.getCount());
     velocidadeMed = (velocidadeD + velocidadeE)/2;
 
-    erro_encoders = 5000 - velocidadeMed;
+    erro_encoders = 6000 - velocidadeMed;
     
     encoder.clearCount();
     encoder2.clearCount();
