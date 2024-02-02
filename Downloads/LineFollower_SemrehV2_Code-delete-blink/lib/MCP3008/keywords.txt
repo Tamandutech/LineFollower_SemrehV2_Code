@@ -1,0 +1,7 @@
+mcp3008	        KEYWORD1
+analogRead	KEYWORD2
+begin           KEYWORD2
+
+
+
+

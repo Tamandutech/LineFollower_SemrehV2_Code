@@ -1,0 +1,58 @@
+#######################################
+# Syntax Coloring Map for QTRSensors
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+QTRSensors	KEYWORD1
+QTRReadMode	KEYWORD1
+QTRType	KEYWORD1
+QTREmitters	KEYWORD1
+CalibrationData	KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+setTypeRC	KEYWORD2
+setTypeAnalog	KEYWORD2
+getType	KEYWORD2
+setSensorPins	KEYWORD2
+setTimeout	KEYWORD2
+getTimeout	KEYWORD2
+setSamplesPerSensor	KEYWORD2
+getSamplesPerSensor	KEYWORD2
+setEmitterPin	KEYWORD2
+setEmitterPins	KEYWORD2
+releaseEmitterPins	KEYWORD2
+getEmitterPinCount	KEYWORD2
+getEmitterPin	KEYWORD2
+getOddEmitterPin	KEYWORD2
+getEvenEmitterPin	KEYWORD2
+setDimmable	KEYWORD2
+setNonDimmable	KEYWORD2
+getDimmable	KEYWORD2
+setDimmingLevel	KEYWORD2
+getDimmingLevel	KEYWORD2
+emittersOff	KEYWORD2
+emittersOn	KEYWORD2
+emittersSelect	KEYWORD2
+calibrate	KEYWORD2
+resetCalibration	KEYWORD2
+read	KEYWORD2
+readCalibrated	KEYWORD2
+readLineBlack	KEYWORD2
+readLineWhite	KEYWORD2
+
+calibrationOn	KEYWORD2
+calibrationOff	KEYWORD2
+
+#######################################
+# Constants (LITERAL1)
+#######################################
+
+QTRNoEmitterPin	LITERAL1
+QTRRCDefaultTimeout	LITERAL1
+QTRMaxSensors	LITERAL1
