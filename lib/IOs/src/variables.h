@@ -1,3 +1,9 @@
+//Botão BOOT
+#define boot 0
+
+//Ventoinha
+#define PROPELLER_PIN 5
+
 //ADC sensores frontais
 #define out_s_front 19
 #define clk 18
@@ -5,14 +11,14 @@
 #define cs_s_front 23
 
 //driver motor
-#define pwmA 13 // Pino PWM do motor esquerdo
-#define pwmB 14 // Pino PWM do motor direito
+#define PWM_LEFT 13 // Pino PWM do motor esquerdo
+#define PWM_RIGHT 14 // Pino PWM do motor direito
 
-#define in_esq1	25 // Pino input1 motor esquerdo
-#define in_esq2 21 // Pino input2 motor esquerdo
+#define in_esq2	21 // Pino input1 motor esquerdo
+#define in_esq1 25 // Pino input2 motor esquerdo
 
-#define in_dir1 26 // Pino input1 motor direito
-#define in_dir2 27 // Pino input2 motor direito
+#define in_dir1 27 // Pino input1 motor direito
+#define in_dir2 26 // Pino input2 motor direito
 
 #define stby 17 // Pino stand-by dos motores
 
@@ -33,12 +39,33 @@
 //Numero de LEDs NeoPixels na placa
 #define LED_COUNT 2 // Numero de LEDs
 
+//Valores para os motores
+#define MAX_PWM 255
+
+#define HIGHSPEED_PWM 130
+
+#define MAPPING_PWM 90
+
+#define PROPELLER_PWM 60
+
 //Valores do PID
-float I = 0, P = 0, D = 0; // Valores de ganho do PID
+float Kp = 0.043; // 0.074  M120 Curva
+float Kd = 0.25; //  0.48   M120 Curva
+
+float KpR = 0.035; // M255
+float KdR = 0.0899; //  M255
+
+float P = 0, D = 0; // Valores de ganho do PID
 float PID = 0; // Valor do ganho do PID total
 
-//Dados para integral
-int error1=0, error2=0, error3=0, error4=0, error5=0, error6=0; // Erros para o calculo da integral
+//Valores para leitura do sensores laterais
+#define MED_TAMANHO 3
+int countLateral = 0; 
+float medLateralEsq = 0;
+float medLateralDir = 0;
+
+float accumLateralDir[MED_TAMANHO] = {};
+float accumLateralEsq[MED_TAMANHO] = {};
 
 float velesq = 0, veldir = 0; // Valor de PWM do motor
 float erro_sensores = 0; // Erro dos sensores (-3500 < x < 3500)
