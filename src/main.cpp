@@ -38,6 +38,8 @@ int32_t velocidadeD;
 int32_t velocidadeE;
 int32_t velocidadeMed;
 
+int32_t targetSpeed = 6000;
+
 void ler_sensores()
 {
   uint16_t sArraychannels[sArray.getSensorCount()];
@@ -209,7 +211,7 @@ void ler_velocidade(void * parameter){
     velocidadeE = (628 * encoder2.getCount());
     velocidadeMed = (velocidadeD + velocidadeE)/2;
 
-    erro_encoders = 6000 - velocidadeMed;
+    erro_encoders = targetSpeed - velocidadeMed;
     
     encoder.clearCount();
     encoder2.clearCount();
@@ -235,7 +237,7 @@ void envia_velocidade_serial(void * parameter){
   while (1) {
     char buffer[60];
     //velocidadeMedReal = (velocidadeMed * 0.0001 );
-    int j = snprintf(buffer, 60, ";%5d\t;%5d\t;%3.2f\t;%5d;", velocidadeD, velocidadeE, PID_enc, velocidadeMed);
+    int j = snprintf(buffer, 60, ";%5d\t;%5d\t;%3.2f\t;%5d\t;%5d", velocidadeD, velocidadeE, PID_enc, velocidadeMed, targetSpeed);
     Serial.println(buffer);
 
     // Pequeno atraso para evitar detecção repetida muito rápida
