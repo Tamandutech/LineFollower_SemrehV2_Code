@@ -160,11 +160,13 @@ void ler_sens_lat_dir(void *parameter){
 
 void ler_laterais(void *parameter){
   char semicolon = ';';
-  int encoderCountEsq = encoder.getCount();
-  int encoderCountDir = encoder2.getCount();
+  int encoderCountEsq;
+  int encoderCountDir;
 
   while(true)
   {
+    encoderCountEsq = encoder.getCount();
+    encoderCountDir = encoder2.getCount();
     int inputEsq = analogRead(s_lat_esq);
     
     accumLateralEsq[countLateral] = analogRead(s_lat_esq);
@@ -235,7 +237,8 @@ void processarAcao(const String& acaoStr) {
     // Log para depuração
     Serial.printf("Ação %d Recebida: %d,%d,%d,%c\n", acaoIndex, limiteInferior, limiteSuperior, velocidadeMotor, corLED);
 }
-
+int encVal;//################################################################APAGAR
+int acaoIndex = 0;
 void callRobotTask(char status)
 {
   switch(status)
@@ -280,19 +283,27 @@ void callRobotTask(char status)
     int quantidade, limiteInferior, limiteSuperior, velocidadeMotor;
     char corLED;
     preferences.begin("acoes", true);
-    for (int i = 0; i < 5; i++) {
-      // Lê os valores de cada ação
-      limiteInferior = preferences.getInt(String("LimInf" + String(i)).c_str(), 0);
-      limiteSuperior = preferences.getInt(String("LimSup" + String(i)).c_str(), 0);
-      velocidadeMotor = preferences.getInt(String("VelMot" + String(i)).c_str(), 0);
-      corLED = preferences.getChar(String("CorLED" + String(i)).c_str(), 'W');
+    
+    // Lê os valores de cada ação
+    limiteInferior = preferences.getInt(String("LimInf" + String(acaoIndex)).c_str(), 0);
+    limiteSuperior = preferences.getInt(String("LimSup" + String(acaoIndex)).c_str(), 0);
+    velocidadeMotor = preferences.getInt(String("VelMot" + String(acaoIndex)).c_str(), 0);
+    corLED = preferences.getChar(String("CorLED" + String(acaoIndex)).c_str(), 'W');
+    Serial.printf("Ação %d Recebida: %d,%d,%d,%c,%d\n", acaoIndex, limiteInferior, limiteSuperior, velocidadeMotor, corLED,encVal);
 
-      Serial.printf("Ação Recebida: %d,%d,%d,%c\n", limiteInferior, limiteSuperior, velocidadeMotor, corLED);
 
-      delay(1000);
+    encVal = (encoder.getCount() + encoder2.getCount()) / 2;
 
-      // Executa a ação se estiver dentro do intervalo especificado
+    if (encVal>=limiteInferior && encVal < limiteSuperior) {
+      ler_sensores();
+      calcula_PID(Kp, Kd);
+      controle_motores(velocidadeMotor);
+      led_stip.setPixelColor(0,corLED);
     }
+    else {
+      acaoIndex++;
+    }
+    // Executa a ação se estiver dentro do intervalo especificado
     preferences.end();
   break;
   }
@@ -345,6 +356,7 @@ void setup()
   //xTaskCreatePinnedToCore(ler_sens_lat_esq,"Sensor lat esq",4000,NULL,1,NULL,0);
   //xTaskCreatePinnedToCore(ler_sens_lat_dir,"Sensor lat dir",4000,NULL,1,NULL,0);
   xTaskCreatePinnedToCore(ler_laterais,"Sensores Laterais",4000,NULL,1,NULL,0);
+
   preferences.begin("acoes", false); // Inicializa o namespace para ações
   //preferences.clear(); // Limpa as preferências anteriores (opcional)
   preferences.end();
@@ -366,9 +378,8 @@ void bluetoothRead()
 void loop()
 {  
   //bluetoothRead();
-  Serial.printf("; %d ; %d \n",encoder.getCount(),encoder2.getCount());
 
-  //callRobotTask(lastReceivedChar);
+  callRobotTask(lastReceivedChar);
 
   led_stip.setPixelColor(0, 0, 255, 0);
   led_stip.show();
