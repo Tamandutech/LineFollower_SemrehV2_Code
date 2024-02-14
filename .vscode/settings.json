@@ -1,6 +1,8 @@
 {
     "files.associations": {
-        "random": "cpp"
+        "random": "cpp",
+        "iosfwd": "cpp",
+        "*.tcc": "cpp"
     },
     "idf.portWin": "COM13",
     "idf.flashType": "UART"

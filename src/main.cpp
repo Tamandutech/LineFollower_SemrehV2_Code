@@ -5,11 +5,24 @@
 #include <Adafruit_NeoPixel.h>
 #include <BluetoothSerial.h>
 
+
+#include <Preferences.h>
+
+struct Acao {
+    int limiteInferior;
+    int limiteSuperior;
+    int velocidadeMotor;
+    char corLED;
+};
+
+
 ESP32Encoder encoder;
 ESP32Encoder encoder2;
 QTRSensors sArray;
 BluetoothSerial SerialBT;
 Adafruit_NeoPixel led_stip(LED_COUNT, led, NEO_GRB + NEO_KHZ800); // Declare our NeoPixel strip object
+
+Preferences preferences;
 
 const uint32_t R = led_stip.Color(255,0,0);
 const uint32_t G = led_stip.Color(0,255,0);
@@ -18,7 +31,7 @@ const uint32_t W = led_stip.Color(255,255,255);
 
 u_int64_t tempo;
 
-char lastReceivedChar = '4';
+char lastReceivedChar = '5';
 
 void ler_sensores()
 {
@@ -201,6 +214,28 @@ void ler_laterais(void *parameter){
   }
 }
 
+void processarAcao(const String& acaoStr) {
+    static int acaoIndex = 0; // Mantém o índice da última ação salva
+
+    // Extrai os componentes da ação da string recebida
+    int limiteInferior, limiteSuperior, velocidadeMotor;
+    char corLED;
+    sscanf(acaoStr.c_str(), "%d,%d,%d,%c", &limiteInferior, &limiteSuperior, &velocidadeMotor, &corLED);
+
+    // Salva a ação na flash com um índice único
+    preferences.begin("acoes", false); // Usa o namespace "acoes"
+    preferences.putInt(String("LimInf" + String(acaoIndex)).c_str(), limiteInferior);
+    preferences.putInt(String("LimSup" + String(acaoIndex)).c_str(), limiteSuperior);
+    preferences.putInt(String("VelMot" + String(acaoIndex)).c_str(), velocidadeMotor);
+    preferences.putChar(String("CorLED" + String(acaoIndex)).c_str(), corLED);
+    preferences.end(); // Fecha a Preferences
+
+    acaoIndex++; // Incrementa o índice para a próxima ação
+
+    // Log para depuração
+    Serial.printf("Ação %d Recebida: %d,%d,%d,%c\n", acaoIndex, limiteInferior, limiteSuperior, velocidadeMotor, corLED);
+}
+
 void callRobotTask(char status)
 {
   switch(status)
@@ -216,6 +251,7 @@ void callRobotTask(char status)
   break;
 
   case '2': //Run
+      //digitalWrite(stby, HIGH);
       ler_sensores();
       calcula_PID(Kp,Kd);
       controle_motores(HIGHSPEED_PWM);
@@ -224,6 +260,40 @@ void callRobotTask(char status)
   case '3': //Abort
       digitalWrite(stby, LOW);
       analogWrite(PROPELLER_PIN, 0);
+  break;
+
+  case '4': //Mapping Deploy
+    static String receivedData;
+    if (SerialBT.available()) {
+        char c = SerialBT.read();
+        if (c == '\n') {
+            // Processa a ação recebida
+            processarAcao(receivedData);
+            receivedData = ""; // Limpa a string para o próximo conjunto de dados
+        } else {
+            receivedData += c; // Monta a string com os dados recebidos
+        }
+    }
+  break;
+
+  case '5': //Read Test
+    int quantidade, limiteInferior, limiteSuperior, velocidadeMotor;
+    char corLED;
+    preferences.begin("acoes", true);
+    for (int i = 0; i < 5; i++) {
+      // Lê os valores de cada ação
+      limiteInferior = preferences.getInt(String("LimInf" + String(i)).c_str(), 0);
+      limiteSuperior = preferences.getInt(String("LimSup" + String(i)).c_str(), 0);
+      velocidadeMotor = preferences.getInt(String("VelMot" + String(i)).c_str(), 0);
+      corLED = preferences.getChar(String("CorLED" + String(i)).c_str(), 'W');
+
+      Serial.printf("Ação Recebida: %d,%d,%d,%c\n", limiteInferior, limiteSuperior, velocidadeMotor, corLED);
+
+      delay(1000);
+
+      // Executa a ação se estiver dentro do intervalo especificado
+    }
+    preferences.end();
   break;
   }
 }
@@ -275,6 +345,9 @@ void setup()
   //xTaskCreatePinnedToCore(ler_sens_lat_esq,"Sensor lat esq",4000,NULL,1,NULL,0);
   //xTaskCreatePinnedToCore(ler_sens_lat_dir,"Sensor lat dir",4000,NULL,1,NULL,0);
   xTaskCreatePinnedToCore(ler_laterais,"Sensores Laterais",4000,NULL,1,NULL,0);
+  preferences.begin("acoes", false); // Inicializa o namespace para ações
+  //preferences.clear(); // Limpa as preferências anteriores (opcional)
+  preferences.end();
 }
 
 void bluetoothRead()
@@ -292,9 +365,10 @@ void bluetoothRead()
 
 void loop()
 {  
-  bluetoothRead();
+  //bluetoothRead();
+  Serial.printf("; %d ; %d \n",encoder.getCount(),encoder2.getCount());
 
-  callRobotTask(lastReceivedChar);
+  //callRobotTask(lastReceivedChar);
 
   led_stip.setPixelColor(0, 0, 255, 0);
   led_stip.show();
