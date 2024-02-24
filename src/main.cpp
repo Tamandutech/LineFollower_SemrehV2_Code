@@ -31,7 +31,11 @@ const uint32_t W = led_stip.Color(255,255,255);
 
 u_int64_t tempo;
 
-char lastReceivedChar = '5';
+char lastReceivedChar = '6';
+bool finished_mapping_deploy = true;
+int encVal;//################################################################APAGAR
+int acaoIndex = 0;
+int lastActionIndex = 1;
 
 void ler_sensores()
 {
@@ -216,6 +220,7 @@ void ler_laterais(void *parameter){
   }
 }
 
+
 void processarAcao(const String& acaoStr) {
     static int acaoIndex = 0; // Mantém o índice da última ação salva
 
@@ -233,12 +238,14 @@ void processarAcao(const String& acaoStr) {
     preferences.end(); // Fecha a Preferences
 
     acaoIndex++; // Incrementa o índice para a próxima ação
-
+    if (corLED=='F'){
+      finished_mapping_deploy = true;
+      lastReceivedChar = '9';
+    }
     // Log para depuração
     Serial.printf("Ação %d Recebida: %d,%d,%d,%c\n", acaoIndex, limiteInferior, limiteSuperior, velocidadeMotor, corLED);
 }
-int encVal;//################################################################APAGAR
-int acaoIndex = 0;
+
 void callRobotTask(char status)
 {
   switch(status)
@@ -266,6 +273,8 @@ void callRobotTask(char status)
   break;
 
   case '4': //Mapping Deploy
+    Serial.println(finished_mapping_deploy);
+    finished_mapping_deploy = false;
     static String receivedData;
     if (SerialBT.available()) {
         char c = SerialBT.read();
@@ -282,29 +291,26 @@ void callRobotTask(char status)
   case '5': //Read Test
     int quantidade, limiteInferior, limiteSuperior, velocidadeMotor;
     char corLED;
-    preferences.begin("acoes", true);
-    
-    // Lê os valores de cada ação
-    limiteInferior = preferences.getInt(String("LimInf" + String(acaoIndex)).c_str(), 0);
-    limiteSuperior = preferences.getInt(String("LimSup" + String(acaoIndex)).c_str(), 0);
-    velocidadeMotor = preferences.getInt(String("VelMot" + String(acaoIndex)).c_str(), 0);
-    corLED = preferences.getChar(String("CorLED" + String(acaoIndex)).c_str(), 'W');
-    Serial.printf("Ação %d Recebida: %d,%d,%d,%c,%d\n", acaoIndex, limiteInferior, limiteSuperior, velocidadeMotor, corLED,encVal);
-
-
     encVal = (encoder.getCount() + encoder2.getCount()) / 2;
+      preferences.begin("acoes", true);
+      limiteInferior = preferences.getInt(String("LimInf" + String(acaoIndex)).c_str(), 0);
+      limiteSuperior = preferences.getInt(String("LimSup" + String(acaoIndex)).c_str(), 0);
+      velocidadeMotor = preferences.getInt(String("VelMot" + String(acaoIndex)).c_str(), 0);
+      corLED = preferences.getChar(String("CorLED" + String(acaoIndex)).c_str(), 'W');
+      preferences.end();
+      Serial.printf("Ação %d Recebida: %d,%d,%d,%c,%d\n", acaoIndex, limiteInferior, limiteSuperior, velocidadeMotor, corLED,encVal);
+      if (encVal>=limiteInferior && encVal < limiteSuperior) {
 
-    if (encVal>=limiteInferior && encVal < limiteSuperior) {
-      ler_sensores();
-      calcula_PID(Kp, Kd);
-      controle_motores(velocidadeMotor);
-      led_stip.setPixelColor(0,corLED);
-    }
-    else {
-      acaoIndex++;
-    }
-    // Executa a ação se estiver dentro do intervalo especificado
-    preferences.end();
+        ler_sensores();
+        calcula_PID(Kp, Kd);
+        controle_motores(velocidadeMotor);
+        Serial.println(velocidadeMotor);
+        //led_stip.setPixelColor(0,corLED);
+      }
+      else {
+        acaoIndex++;
+      }
+
   break;
   }
 }
@@ -377,8 +383,10 @@ void bluetoothRead()
 
 void loop()
 {  
-  //bluetoothRead();
-
+  if(finished_mapping_deploy == true){
+    bluetoothRead();
+  }
+    
   callRobotTask(lastReceivedChar);
 
   led_stip.setPixelColor(0, 0, 255, 0);
