@@ -14,17 +14,17 @@
 #define PWM_LEFT 13 // Pino PWM do motor esquerdo
 #define PWM_RIGHT 14 // Pino PWM do motor direito
 
-#define in_esq2	21 // Pino input1 motor esquerdo
-#define in_esq1 25 // Pino input2 motor esquerdo
+#define in_esq2	25 // Pino input1 motor esquerdo
+#define in_esq1 21 // Pino input2 motor esquerdo
 
-#define in_dir1 27 // Pino input1 motor direito
-#define in_dir2 26 // Pino input2 motor direito
+#define in_dir1 26 // Pino input1 motor direito
+#define in_dir2 27 // Pino input2 motor direito
 
 #define stby 17 // Pino stand-by dos motores
 
 //Sensores laterais
-#define s_lat_esq 39 // Pino sensor lateral esquerdo
-#define s_lat_dir 33 // Pino sensor lateral direito
+#define s_lat_esq 39 //39 // Pino sensor lateral esquerdo
+#define s_lat_dir 33 //33 // Pino sensor lateral direito
 
 //Encoder
 #define enc_eq_A 34 // Pino inputA encoder esquerdo
@@ -44,21 +44,22 @@
 
 #define HIGHSPEED_PWM 130
 
-#define MAPPING_PWM 90
+#define MAPPING_PWM 70
 
-#define PROPELLER_PWM 60
+#define PROPELLER_PWM 200
 
 //Valores do PID
 float Kp = 0.043; // 0.074  M120 Curva
 float Kd = 0.25; //  0.48   M120 Curva
 
 float KpR = 0.035; // M255
-float KdR = 0.0899; //  M255
+float KdR = 0.38; //  M255
 
 float P = 0, D = 0; // Valores de ganho do PID
 float PID = 0; // Valor do ganho do PID total
 
 //Valores para leitura do sensores laterais
+#define DEBOUNCETIME 200
 #define MED_TAMANHO 3
 int countLateral = 0; 
 float medLateralEsq = 0;

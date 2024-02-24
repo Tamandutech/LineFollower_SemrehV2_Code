@@ -18,7 +18,7 @@ const uint32_t W = led_stip.Color(255,255,255);
 
 u_int64_t tempo;
 
-char lastReceivedChar = '4';
+bool FirstTimeOnSwitchCase = true;
 
 void ler_sensores()
 {
@@ -69,33 +69,56 @@ void controle_motores(float motorPWM)
   analogWrite(PWM_LEFT,velesq);
 }
 
+struct MotorControlData {
+    int encoderValueBegin;
+    int encoderValueEnd;
+    int motorPWM;
+};
+
+std::vector<MotorControlData> trackMap = {
+  //{encoderValueBegin, encoderValueEnd, motorPWM},
+    {0, 150, 150},       // Começo de pista lateral direito até primeira marcação
+    {151, 760, 100},     // Primeira curva
+    {761, 1000, 180},    // Primeira retinha
+    {1451, 7500, 170},   // Trevo
+    {7501, 8200, 170},   // Curva depois do trevo
+    {8201, 8900, 170},   // Antes do U
+    {8901, 9300, 170},   // Curvinha antes do U
+    {9301, 11000, 170}  // U
+};
+
+void motorControlWithMap(int encVal)
+{
+  bool not_mapped = true;
+  for (const auto& MotorControlData : trackMap)
+  {
+    int firstEncoderValue = MotorControlData.encoderValueBegin;
+    int secondEncoderValue = MotorControlData.encoderValueEnd;
+    int pwmDeliveredToMotors = MotorControlData.motorPWM;
+
+    if (encVal >= firstEncoderValue && encVal <= secondEncoderValue)
+    {
+      calcula_PID(Kp, Kd);
+      controle_motores(pwmDeliveredToMotors);
+      not_mapped = false;
+      //return;
+    }
+  }
+  if(not_mapped){
+    calcula_PID(Kp, Kd);
+    controle_motores(110);
+  }
+}
+
 void controle_com_mapeamento(int encVal)
 {
   //começo de pista lateral direito até primeira marcaçao
-  if(encVal>0 && encVal<=150) {calcula_PID(Kp,Kd); controle_motores(150);led_stip.setPixelColor(0,B);}
+  if(encVal<650) {calcula_PID(Kp,Kd); controle_motores(100);}
+  //else if(encVal >= 20500 && encVal <= 21700) {calcula_PID(Kp,Kd); controle_motores(255);}
+  else if (encVal >= 22000 && encVal <= 23800) {calcula_PID(Kp,Kd); controle_motores(255);}
+  else if(encVal>27800 /*&& encVal<=20000*/) {analogWrite(PWM_LEFT,0); analogWrite(PWM_RIGHT,0); analogWrite(PROPELLER_PIN, 0);/*calcula_PID(KpR,KdR); controle_motores(200);led_stip.setPixelColor(0,B);*/}
   
-  //primeira curva
-  else if(encVal>150 && encVal<=760) {calcula_PID(Kp,Kd); controle_motores(100);led_stip.setPixelColor(0,R);}
-
-  //primeira retinha
-  else if(encVal>760 && encVal<=1000) {calcula_PID(Kp,Kd); controle_motores(180);led_stip.setPixelColor(0,G);}
-  
-  //trevo
-  else if(encVal>1450 && encVal<=7500) {calcula_PID(Kp,Kd);controle_motores(170);led_stip.setPixelColor(0,B);}
-
-  //curva depois do trevo
-  else if(encVal>7500 && encVal<=8200) {calcula_PID(Kp,Kd);controle_motores(145);led_stip.setPixelColor(0,R);}
-
-  //antes do U
-  else if(encVal>8200 && encVal<=8900) {calcula_PID(Kp,Kd); controle_motores(150);led_stip.setPixelColor(0,G);}
-
-  //curvinha antes do U
-  else if(encVal>8900 && encVal<=9300) {calcula_PID(Kp,Kd); controle_motores(120);led_stip.setPixelColor(0,B);}
-
-  //U
-  else if(encVal>9300 && encVal<=11000) {calcula_PID(Kp,Kd); controle_motores(130);led_stip.setPixelColor(0,R);}
-
-  else{calcula_PID(Kp,Kd); controle_motores(110); led_stip.setPixelColor(0,W);}
+  else{calcula_PID(Kp,Kd); controle_motores(120); led_stip.setPixelColor(0,W);}
 }
 
 void ler_sens_lat_esq(void *parameter){
@@ -146,14 +169,11 @@ void ler_sens_lat_dir(void *parameter){
 }
 
 void ler_laterais(void *parameter){
-  char semicolon = ';';
-  int encoderCountEsq = encoder.getCount();
-  int encoderCountDir = encoder2.getCount();
-
+  static bool readingWhiteLeft;
+  static bool readingWhiteRight;
+  static bool firstTimeRight = false;
   while(true)
   {
-    int inputEsq = analogRead(s_lat_esq);
-    
     accumLateralEsq[countLateral] = analogRead(s_lat_esq);
     accumLateralDir[countLateral] = analogRead(s_lat_dir);
     countLateral++;
@@ -167,37 +187,67 @@ void ler_laterais(void *parameter){
     medLateralDir = medLateralDir / MED_TAMANHO;
     medLateralEsq = medLateralEsq / MED_TAMANHO;
     
-    if(medLateralEsq < 3000 || medLateralDir < 3000) //lê marcação esquerdo ou direito
+    if(medLateralEsq < 3000 || medLateralDir < 3000) //lê marcação esquerdo ou direito esq3100 dir3700
     {
-      if(medLateralEsq < 2000 && medLateralDir > 3500) //lê apenas marcação esquerda
+      if(medLateralEsq < 2000 && medLateralDir > 3500 && readingWhiteLeft == false) //lê apenas marcação esquerda
       {
-        SerialBT.print(semicolon); SerialBT.print(encoderCountEsq); SerialBT.print(semicolon); SerialBT.print(encoderCountDir); SerialBT.print(semicolon); SerialBT.println((encoderCountEsq + encoderCountDir)/2);
+        SerialBT.print(';'); 
+        SerialBT.print(encoder.getCount()); 
+        SerialBT.print(';'); 
+        SerialBT.print(encoder2.getCount()); 
+        SerialBT.print(';'); 
+        SerialBT.println((encoder.getCount() + encoder2.getCount())/2);
         led_stip.setPixelColor(1, 0, 0, 255);
         led_stip.show();
-        digitalWrite(buzzer, HIGH);  // Ligar o buzzer
-        vTaskDelay(pdMS_TO_TICKS(100));  // Manter o buzzer ligado por 100ms
-        digitalWrite(buzzer, LOW);   // Desligar o buzzer
+        // digitalWrite(buzzer, HIGH);  // Ligar o buzzer
+        // vTaskDelay(pdMS_TO_TICKS(40));  // Manter o buzzer ligado por 100ms
+        // digitalWrite(buzzer, LOW);   // Desligar o buzzer
         led_stip.setPixelColor(1, 0, 0, 0);
         led_stip.show();
+        readingWhiteLeft = true;
+        digitalWrite(buzzer, HIGH);
       }
 
-      else if(medLateralEsq > 3500 && medLateralDir < 2000) //lê apenas marcação direita
+      else if(medLateralEsq > 3500 && medLateralDir < 2000 && readingWhiteRight == false && firstTimeRight == false) //lê apenas marcação direita
       {
         tempo = millis();
         SerialBT.println("INICIO/FIM");
         encoder2.clearCount();
         encoder.clearCount();
-
+        firstTimeRight = true;
+        readingWhiteRight = true;
         digitalWrite(buzzer, HIGH);
-        vTaskDelay(pdMS_TO_TICKS(100));  // Manter o buzzer ligado por 100ms
-        digitalWrite(buzzer, LOW);   // Desligar o buzzer
+        // vTaskDelay(pdMS_TO_TICKS(40));  // Manter o buzzer ligado por 100ms
+        // digitalWrite(buzzer, LOW);   // Desligar o buzzer
       }
+    }
+
+    else
+    {
+      readingWhiteLeft = false;
+      readingWhiteRight = false;
+      digitalWrite(buzzer, LOW);
     }
     medLateralDir = 0;
     medLateralEsq = 0;
 
     countLateral = countLateral % MED_TAMANHO;
-    vTaskDelay(pdMS_TO_TICKS(5));  // Pausa de 5ms entre as verificações
+    vTaskDelay(pdMS_TO_TICKS(8));  // Pausa de 5ms entre as verificações
+  }
+}
+
+char lastReceivedChar = '3'; // = Abort
+
+void bluetoothRead()
+{
+  if(SerialBT.available()) 
+  {
+    char incomingChar = (char)SerialBT.read();
+    while (SerialBT.available())
+    {
+      SerialBT.read();
+    }
+    lastReceivedChar = incomingChar;
   }
 }
 
@@ -205,25 +255,51 @@ void callRobotTask(char status)
 {
   switch(status)
   {
-  case '0': //Map
-      ler_sensores();
-      calcula_PID(Kp,Kd);
-      controle_motores(MAPPING_PWM);
-  break;
-  
-  case '1': //Propeller
-      analogWrite(PROPELLER_PIN,PROPELLER_PWM);
+  // case '0': //Calibrate
+  //   if (FirstTimeOnSwitchCase == true)
+  //   {
+  //     for (int i = 0; i < 300; i++)
+  //     {
+  //       if(i < 200)
+  //       {
+  //         led_stip.setPixelColor(0,B);
+  //         led_stip.show();
+  //       }
+
+  //       else
+  //       {
+  //         led_stip.setPixelColor(0,R);
+  //         led_stip.show();
+  //       }
+  //       sArray.calibrate();
+  //       delay(20);
+  //     }
+
+  //     led_stip.setPixelColor(0, 0, 0, 0);
+  //     led_stip.show();
+  //     FirstTimeOnSwitchCase = false;
+  //   }
+  // break;
+
+  case '1': //Map
+    ler_sensores();
+    calcula_PID(Kp,Kd);
+    controle_motores(MAPPING_PWM);
   break;
 
-  case '2': //Run
-      ler_sensores();
-      calcula_PID(Kp,Kd);
-      controle_motores(HIGHSPEED_PWM);
+  case '2': //Run with track map
+    ler_sensores();
+    controle_com_mapeamento((encoder.getCount()+encoder2.getCount())/2);
   break;
 
   case '3': //Abort
-      digitalWrite(stby, LOW);
-      analogWrite(PROPELLER_PIN, 0);
+    analogWrite(PWM_LEFT,0);
+    analogWrite(PWM_RIGHT,0);
+    analogWrite(PROPELLER_PIN, 0);
+  break;
+
+  case '6': //Propeller
+    analogWrite(PROPELLER_PIN,PROPELLER_PWM);
   break;
   }
 }
@@ -263,39 +339,43 @@ void setup()
   sArray.setSensorPins((const uint8_t[]){0, 1, 2, 3, 4, 5, 6, 7}, 8, (gpio_num_t)out_s_front, (gpio_num_t)in_s_front, (gpio_num_t)clk, (gpio_num_t)cs_s_front, 1350000, VSPI_HOST);
   sArray.setSamplesPerSensor(5); // VERIFICARRR
 
-  led_stip.setPixelColor(0, 0, 0, 255);
-  led_stip.show();
-
-  for (uint16_t i = 0; i < 300; i++)
+  for (int i = 0; i < 300; i++)
   {
+    if(i < 200)
+    {
+      led_stip.setPixelColor(0,B);
+      led_stip.show();
+    }
+
+    else
+    {
+      led_stip.setPixelColor(0,R);
+      led_stip.show();
+    }
     sArray.calibrate();
     delay(20);
   }
-  
+  led_stip.setPixelColor(0,0,0,0);
+  led_stip.show();
+  encoder.clearCount();
+  encoder2.clearCount();
+
   //xTaskCreatePinnedToCore(ler_sens_lat_esq,"Sensor lat esq",4000,NULL,1,NULL,0);
   //xTaskCreatePinnedToCore(ler_sens_lat_dir,"Sensor lat dir",4000,NULL,1,NULL,0);
   xTaskCreatePinnedToCore(ler_laterais,"Sensores Laterais",4000,NULL,1,NULL,0);
 }
 
-void bluetoothRead()
-{
-  if(SerialBT.available()) 
-  {
-    char incomingChar = (char)SerialBT.read();
-    while (SerialBT.available())
-    {
-      SerialBT.read();
-    }
-    lastReceivedChar = incomingChar;
-  }
-}
-
 void loop()
 {  
+  // ler_sensores();
+  // calcula_PID(KpR,KdR);
+  // controle_motores(180);
   bluetoothRead();
 
   callRobotTask(lastReceivedChar);
 
-  led_stip.setPixelColor(0, 0, 255, 0);
-  led_stip.show();
+  // SerialBT.print(analogRead(s_lat_dir));
+  // SerialBT.print(";");
+  // SerialBT.println(analogRead(s_lat_esq));
+  // delay(300);
 }
