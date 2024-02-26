@@ -20,6 +20,9 @@ u_int64_t tempo;
 
 bool FirstTimeOnSwitchCase = true;
 
+long int calculate_rpm_esq();
+long int calculate_rpm_dir();
+
 void ler_sensores()
 {
   uint16_t sArraychannels[sArray.getSensorCount()];
@@ -33,6 +36,16 @@ void calcula_PID(float KpParam, float KdParam)
   D = erro_f - erro_anterior;
   PID = (KpParam * P) + (KdParam * D);
   erro_anterior = erro_f;
+}
+
+void calcula_PID_rot(float KpParamRot , float KdParamRot , float KiParamrot){
+  erro_f_rot = (calculate_rpm_esq() - calculate_rpm_dir());
+  P_rot = erro_f_rot;
+  D_rot = erro_f_rot - erro_anterior_rot;
+  I_rot += erro_f_rot;
+  PIDrot =(KpParamRot*P_rot)+(KdParamRot*D_rot)+(KiParamRot*I_rot);
+  erro_anterior_rot = erro_f_rot;
+  
 }
 
 void controle_motores(float motorPWM)
@@ -67,6 +80,40 @@ void controle_motores(float motorPWM)
     digitalWrite(in_esq2,LOW);
   }
   analogWrite(PWM_LEFT,velesq);
+}
+
+void controle_motores_rot(float motorPWM)
+{
+  velesqrot = motorPWM + PIDrot;
+  veldirrot = motorPWM - PIDrot;
+
+  if(veldirrot >= 0)
+  {
+    if(veldirrot > MAX_PWM) veldirrot = MAX_PWM;
+    digitalWrite(in_dir1,LOW);
+    digitalWrite(in_dir2,HIGH);
+  }
+  else
+  {
+    veldirrot = (-1) * veldirrot;
+    digitalWrite(in_dir1,HIGH);
+    digitalWrite(in_dir2,LOW);
+  }
+  analogWrite(PWM_RIGHT,veldirrot);
+
+  if(velesqrot >= 0)
+  {
+    if (velesqrot > MAX_PWM) velesqrot = MAX_PWM;
+    digitalWrite(in_esq1,LOW);
+    digitalWrite(in_esq2,HIGH);
+  }
+  else
+  {
+    velesqrot = (-1) * velesqrot;
+    digitalWrite(in_esq1,HIGH);
+    digitalWrite(in_esq2,LOW);
+  }
+  analogWrite(PWM_LEFT,velesqrot);
 }
 
 struct MotorControlData {
@@ -112,66 +159,35 @@ void motorControlWithMap(int encVal)
 
 void controle_com_mapeamento(int encVal)
 {
-  //começo de pista lateral direito até primeira marcaçao
-  if(encVal<650) {calcula_PID(Kp,Kd); controle_motores(100);}
-  //else if(encVal >= 20500 && encVal <= 21700) {calcula_PID(Kp,Kd); controle_motores(255);}
-  else if (encVal >= 22000 && encVal <= 23800) {calcula_PID(Kp,Kd); controle_motores(255);}
-  else if(encVal>27800 /*&& encVal<=20000*/) {analogWrite(PWM_LEFT,0); analogWrite(PWM_RIGHT,0); analogWrite(PROPELLER_PIN, 0);/*calcula_PID(KpR,KdR); controle_motores(200);led_stip.setPixelColor(0,B);*/}
+  if(encVal<200) {calcula_PID(Kp,Kd); controle_motores(120);} //começo de pista lateral direito até primeira marcaçao
+  else if (encVal >= 223 && encVal <= 866) {calcula_PID(Kp,Kd); controle_motores(110);}
+  else if (encVal >= 930 && encVal <= 1061) {calcula_PID(Kp,Kd); controle_motores(255);}
+  else if (encVal >= 1600 && encVal <= 1900) {calcula_PID(Kp,Kd); controle_motores(115);}
+  else if (encVal >= 1940 && encVal <= 2000) {calcula_PID(Kp,Kd); controle_motores(255);}
+  else if (encVal >= 2600 && encVal <= 2700) {calcula_PID(Kp,Kd); controle_motores(115);}
+  else if (encVal >= 2750 && encVal <= 2910) {calcula_PID(Kp,Kd); controle_motores(200);}
+  else if (encVal >= 3407 && encVal <= 4975) {calcula_PID(Kp,Kd); controle_motores(210);} //bolona
+  else if (encVal >= 2750 && encVal <= 5080) {calcula_PID(Kp,Kd); controle_motores(210);} //bolona
+  else if (encVal >= 5450 && encVal <= 6600) {calcula_PID(Kp,Kd); controle_motores(169);}
+  else if (encVal >= 6800 && encVal <= 6900) {calcula_PID(Kp,Kd); controle_motores(126);}
+  else if (encVal >= 7000 && encVal <= 7300) {calcula_PID(Kp,Kd); controle_motores(150);}
+  else if (encVal >= 7950 && encVal <= 8200) {calcula_PID(Kp,Kd); controle_motores(200);}
+  else if (encVal >= 9750 && encVal <= 11300) {calcula_PID(KpR,KdR); controle_motores(240);} //reta cruzamen
+  else if (encVal >= 12300 && encVal <= 13300) {calcula_PID(KpR,KdR); controle_motores(150);} //pós curz
+  else if (encVal >= 13900 && encVal <= 14800) {calcula_PID(KpR,KdR); controle_motores(120);} //180 graus
+  else if (encVal >= 14900 && encVal <= 15800) {calcula_PID(KpR,KdR); controle_motores(240);} //reta antes do zig
+  else if (encVal >= 15801 && encVal <= 18300) {digitalWrite(in_dir1,LOW);digitalWrite(in_dir2,HIGH);analogWrite(PWM_RIGHT,200);digitalWrite(in_esq1,LOW);digitalWrite(in_esq2,HIGH);analogWrite(PWM_LEFT,185);} //zig PARA IR PRA DIREITA AUMENTAR PWM ESQUERDA (AINDA ESTÁ INDO PRA A ESQUERDA)
+  // else if (encVal >= 19800 && encVal <= 21000) {calcula_PID(KpR,KdR); controle_motores(250);}
+  // else if (encVal >= 22000 && encVal <= 25000) {calcula_PID(KpR,KdR); controle_motores(250);}
+  else if (encVal>26500 /*&& encVal<=20000*/) {analogWrite(PWM_LEFT,0); analogWrite(PWM_RIGHT,0); analogWrite(PROPELLER_PIN, 0);/*calcula_PID(KpR,KdR); controle_motores(200);led_stip.setPixelColor(0,B);*/}
   
-  else{calcula_PID(Kp,Kd); controle_motores(120); led_stip.setPixelColor(0,W);}
-}
-
-void ler_sens_lat_esq(void *parameter){
-  while (1) {
-    int inputValue = analogRead(s_lat_esq);
-    if (inputValue < 3000) {
-      //encoderCount = encoder.getCount();
-      //encoderCount2 = encoder2.getCount();
-      //encoderMed = (encoderCount+encoderCount2)/2;
-
-      //SerialBT.printf("; %d ; %d ; %d\n",encoderCount,encoderCount2,encoderMed);
-      SerialBT.print(";");
-      SerialBT.print(encoder.getCount()); 
-      SerialBT.print(";");
-      SerialBT.print(encoder2.getCount());
-      SerialBT.print(";");
-      SerialBT.println((encoder.getCount()+encoder2.getCount())/2);
-
-      led_stip.setPixelColor(1, 0, 0, 255);
-      led_stip.show();
-      digitalWrite(buzzer, HIGH);  // Ligar o buzzer
-      vTaskDelay(pdMS_TO_TICKS(100));  // Manter o buzzer ligado por 100ms
-      digitalWrite(buzzer, LOW);   // Desligar o buzzer
-      led_stip.setPixelColor(1, 0, 0, 0);
-      led_stip.show();
-    }
-    // Pequeno atraso para evitar detecção repetida muito rápida
-    vTaskDelay(pdMS_TO_TICKS(5));  // Pausa de 20ms entre as verificações    
-  }
-}
-
-void ler_sens_lat_dir(void *parameter){
-  while (1) {
-    int inputValue = analogRead(s_lat_dir);
-    if (inputValue < 3000) {
-      tempo = millis();
-      SerialBT.println("INICIO/FIM");
-      encoder2.clearCount();
-      encoder.clearCount();
-
-      digitalWrite(buzzer, HIGH);
-      vTaskDelay(pdMS_TO_TICKS(100));  // Manter o buzzer ligado por 100ms
-      digitalWrite(buzzer, LOW);   // Desligar o buzzer
-    }
-    // Pequeno atraso para evitar detecção repetida muito rápida
-    vTaskDelay(pdMS_TO_TICKS(5));  // Pausa de 20ms entre as verificações
-  }
+  else{calcula_PID(Kp,Kd); controle_motores(110); led_stip.setPixelColor(0,G);}
 }
 
 void ler_laterais(void *parameter){
   static bool readingWhiteLeft;
-  static bool readingWhiteRight;
-  static bool firstTimeRight = false;
+  static bool readingWhiteRight; // variável para que a marcação seja lida apenas uma vez
+  static bool firstTimeRight = false; // variável para evitar leitura de lateral direito no meio da pista
   while(true)
   {
     accumLateralEsq[countLateral] = analogRead(s_lat_esq);
@@ -304,6 +320,24 @@ void callRobotTask(char status)
   }
 }
 
+long int calculate_rpm_esq(){
+  Serial.print(enc_esq_pul);
+  Serial.print(", ");
+  Serial.println(pul_prev_esq);
+  enc_esq_pul = encoder.getCount() - pul_prev_esq;
+  pul_prev_esq = encoder.getCount();
+
+  return enc_esq_pul;
+}
+
+long int calculate_rpm_dir(){
+  Serial.print(enc_dir_pul);
+  Serial.print(", ");
+  Serial.println(pul_prev_dir);
+  enc_dir_pul =  encoder2.getCount() - pul_prev_dir;
+  pul_prev_dir = encoder2.getCount();
+  return enc_dir_pul;
+}
 void setup()
 {
   Serial.begin(115200);
@@ -367,15 +401,18 @@ void setup()
 
 void loop()
 {  
-  // ler_sensores();
-  // calcula_PID(KpR,KdR);
-  // controle_motores(180);
   bluetoothRead();
 
   callRobotTask(lastReceivedChar);
 
-  // SerialBT.print(analogRead(s_lat_dir));
-  // SerialBT.print(";");
-  // SerialBT.println(analogRead(s_lat_esq));
-  // delay(300);
+  // digitalWrite(in_dir1,LOW);
+  // digitalWrite(in_dir2,HIGH);
+  // analogWrite(PWM_RIGHT,200);
+
+  // digitalWrite(in_esq1,LOW);
+  // digitalWrite(in_esq2,HIGH);
+  // analogWrite(PWM_LEFT,190);
+
+  // calcula_PID_rot(KpParamRot,KdParamRot,KiParamRot);
+  // controle_motores(140);
 }

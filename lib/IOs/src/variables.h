@@ -52,8 +52,8 @@
 float Kp = 0.043; // 0.074  M120 Curva
 float Kd = 0.25; //  0.48   M120 Curva
 
-float KpR = 0.035; // M255
-float KdR = 0.38; //  M255
+float KpR = 0.043; // M255
+float KdR = 0.43; //  M255
 
 float P = 0, D = 0; // Valores de ganho do PID
 float PID = 0; // Valor do ganho do PID total
@@ -69,6 +69,26 @@ float accumLateralDir[MED_TAMANHO] = {};
 float accumLateralEsq[MED_TAMANHO] = {};
 
 float velesq = 0, veldir = 0; // Valor de PWM do motor
+float velesqrot = 0, veldirrot = 0;
 float erro_sensores = 0; // Erro dos sensores (-3500 < x < 3500)
 float erro_anterior = 0; // Erro anterior dos sensores (-3500 < x < 3500)
 float erro_f = 0; // Erro dos sensores (-3500 < x < 3500)
+
+
+
+// variáveis globais controle rotacional
+long int enc_esq_pul = 0;
+long int enc_dir_pul = 0;
+long int pul_prev_esq = 0;
+long int pul_prev_dir = 0;
+
+float erro_f_rot = 0;
+float erro_anterior_rot = 0;
+float P_rot = 0 ;
+float D_rot = 0;
+float I_rot = 0;
+float KpParamRot=180;
+float PIDrot = 0;
+float KdParamRot=3;
+float KiParamRot=10;
+
