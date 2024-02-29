@@ -40,6 +40,10 @@
 #define LED_COUNT 2 // Numero de LEDs
 
 //Valores para os motores
+float last_pwm = 0;
+
+float run_pwm;
+
 #define MAX_PWM 255
 
 #define HIGHSPEED_PWM 130
@@ -53,7 +57,7 @@ float Kp = 0.043; // 0.074  M120 Curva
 float Kd = 0.25; //  0.48   M120 Curva
 
 float KpR = 0.043; // M255
-float KdR = 0.43; //  M255
+float KdR = 0.6; //  M255
 
 float P = 0, D = 0; // Valores de ganho do PID
 float PID = 0; // Valor do ganho do PID total

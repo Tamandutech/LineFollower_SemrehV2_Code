@@ -48,10 +48,25 @@ void calcula_PID_rot(float KpParamRot , float KdParamRot , float KiParamrot){
   
 }
 
+float curva_acel(float pwm_goal)
+{
+
+  if (pwm_goal > last_pwm)
+  {
+    last_pwm += 5;
+    run_pwm = last_pwm;
+  }
+  else
+  {
+    run_pwm = pwm_goal;
+  }
+  return run_pwm;
+}
+
 void controle_motores(float motorPWM)
 {
-  velesq = motorPWM + PID;
-  veldir = motorPWM - PID;
+  velesq = curva_acel(motorPWM) + PID;
+  veldir = curva_acel(motorPWM) - PID;
 
   if(veldir >= 0)
   {
@@ -117,21 +132,37 @@ void controle_motores_rot(float motorPWM)
 }
 
 struct MotorControlData {
-    int encoderValueBegin;
-    int encoderValueEnd;
+    float encoderValueBegin;
+    float encoderValueEnd;
     int motorPWM;
 };
 
 std::vector<MotorControlData> trackMap = {
   //{encoderValueBegin, encoderValueEnd, motorPWM},
-    {0, 150, 150},       // Começo de pista lateral direito até primeira marcação
-    {151, 760, 100},     // Primeira curva
-    {761, 1000, 180},    // Primeira retinha
-    {1451, 7500, 170},   // Trevo
-    {7501, 8200, 170},   // Curva depois do trevo
-    {8201, 8900, 170},   // Antes do U
-    {8901, 9300, 170},   // Curvinha antes do U
-    {9301, 11000, 170}  // U
+    {0, 220, 120},
+    {223.5,	866.5,	110},
+    {866.5,	1061.6,	170},
+    {1591.5,	1909.0,	108},
+    {1909,	2059.4,	170},
+    {2587.5,	2850.0,	109},
+    {2850,	2875.4,	119},
+    {3300,	5085.5,	210}, //bolona
+    {5448.5,	6644.0,	169},
+    {6769,	6991.0,	126},
+    {6991,	6786.5,	255},
+    {7180.5,	7378.3,	159},
+    {7497.5,	7939.5,	115},
+    {7939.5,	8262.9,	202},
+    {8571.5,	9471.0,	99},
+    {9900,	11300.0,	240}, //reta cruzamento
+    {11987,	13300.5,	115},
+    //{14950,	15956.0,	240},
+    {15956,	18390.5,	130},
+    {18800,	19227.5,	117},
+    {19700.5,	20926.6,	240},
+    {21434,	21833.5,	118},
+    {22400.5,	25500/*24977.7*/,	240},
+    {26300, 999999, 0}
 };
 
 void motorControlWithMap(int encVal)
@@ -139,21 +170,30 @@ void motorControlWithMap(int encVal)
   bool not_mapped = true;
   for (const auto& MotorControlData : trackMap)
   {
-    int firstEncoderValue = MotorControlData.encoderValueBegin;
-    int secondEncoderValue = MotorControlData.encoderValueEnd;
+    float firstEncoderValue = MotorControlData.encoderValueBegin;
+    float secondEncoderValue = MotorControlData.encoderValueEnd;
     int pwmDeliveredToMotors = MotorControlData.motorPWM;
 
     if (encVal >= firstEncoderValue && encVal <= secondEncoderValue)
     {
-      calcula_PID(Kp, Kd);
-      controle_motores(pwmDeliveredToMotors);
+      if(pwmDeliveredToMotors>=220)
+      {
+        calcula_PID(KpR, KdR);
+        controle_motores(pwmDeliveredToMotors);
+      }
+      
+      else
+      { 
+        calcula_PID(Kp, Kd);
+        controle_motores(pwmDeliveredToMotors);
+      }
       not_mapped = false;
       //return;
     }
   }
   if(not_mapped){
     calcula_PID(Kp, Kd);
-    controle_motores(110);
+    controle_motores(100);
   }
 }
 
@@ -166,8 +206,7 @@ void controle_com_mapeamento(int encVal)
   else if (encVal >= 1940 && encVal <= 2000) {calcula_PID(Kp,Kd); controle_motores(255);}
   else if (encVal >= 2600 && encVal <= 2700) {calcula_PID(Kp,Kd); controle_motores(115);}
   else if (encVal >= 2750 && encVal <= 2910) {calcula_PID(Kp,Kd); controle_motores(200);}
-  else if (encVal >= 3407 && encVal <= 4975) {calcula_PID(Kp,Kd); controle_motores(210);} //bolona
-  else if (encVal >= 2750 && encVal <= 5080) {calcula_PID(Kp,Kd); controle_motores(210);} //bolona
+  else if (encVal >= 3407 && encVal <= 5080) {calcula_PID(Kp,Kd); controle_motores(210);} //bolona
   else if (encVal >= 5450 && encVal <= 6600) {calcula_PID(Kp,Kd); controle_motores(169);}
   else if (encVal >= 6800 && encVal <= 6900) {calcula_PID(Kp,Kd); controle_motores(126);}
   else if (encVal >= 7000 && encVal <= 7300) {calcula_PID(Kp,Kd); controle_motores(150);}
@@ -179,8 +218,7 @@ void controle_com_mapeamento(int encVal)
   else if (encVal >= 15801 && encVal <= 18300) {digitalWrite(in_dir1,LOW);digitalWrite(in_dir2,HIGH);analogWrite(PWM_RIGHT,200);digitalWrite(in_esq1,LOW);digitalWrite(in_esq2,HIGH);analogWrite(PWM_LEFT,185);} //zig PARA IR PRA DIREITA AUMENTAR PWM ESQUERDA (AINDA ESTÁ INDO PRA A ESQUERDA)
   // else if (encVal >= 19800 && encVal <= 21000) {calcula_PID(KpR,KdR); controle_motores(250);}
   // else if (encVal >= 22000 && encVal <= 25000) {calcula_PID(KpR,KdR); controle_motores(250);}
-  else if (encVal>26500 /*&& encVal<=20000*/) {analogWrite(PWM_LEFT,0); analogWrite(PWM_RIGHT,0); analogWrite(PROPELLER_PIN, 0);/*calcula_PID(KpR,KdR); controle_motores(200);led_stip.setPixelColor(0,B);*/}
-  
+  else if (encVal>26500) {analogWrite(PWM_LEFT,0); analogWrite(PWM_RIGHT,0); analogWrite(PROPELLER_PIN, 0);}
   else{calcula_PID(Kp,Kd); controle_motores(110); led_stip.setPixelColor(0,G);}
 }
 
@@ -271,32 +309,6 @@ void callRobotTask(char status)
 {
   switch(status)
   {
-  // case '0': //Calibrate
-  //   if (FirstTimeOnSwitchCase == true)
-  //   {
-  //     for (int i = 0; i < 300; i++)
-  //     {
-  //       if(i < 200)
-  //       {
-  //         led_stip.setPixelColor(0,B);
-  //         led_stip.show();
-  //       }
-
-  //       else
-  //       {
-  //         led_stip.setPixelColor(0,R);
-  //         led_stip.show();
-  //       }
-  //       sArray.calibrate();
-  //       delay(20);
-  //     }
-
-  //     led_stip.setPixelColor(0, 0, 0, 0);
-  //     led_stip.show();
-  //     FirstTimeOnSwitchCase = false;
-  //   }
-  // break;
-
   case '1': //Map
     ler_sensores();
     calcula_PID(Kp,Kd);
@@ -305,13 +317,18 @@ void callRobotTask(char status)
 
   case '2': //Run with track map
     ler_sensores();
-    controle_com_mapeamento((encoder.getCount()+encoder2.getCount())/2);
+    motorControlWithMap((encoder.getCount()+encoder2.getCount())/2);
   break;
 
   case '3': //Abort
     analogWrite(PWM_LEFT,0);
     analogWrite(PWM_RIGHT,0);
     analogWrite(PROPELLER_PIN, 0);
+  break;
+
+  case '4': //Pausa locomoção
+    analogWrite(PWM_LEFT,0);
+    analogWrite(PWM_RIGHT,0);
   break;
 
   case '6': //Propeller
@@ -338,6 +355,7 @@ long int calculate_rpm_dir(){
   pul_prev_dir = encoder2.getCount();
   return enc_dir_pul;
 }
+
 void setup()
 {
   Serial.begin(115200);
@@ -373,9 +391,9 @@ void setup()
   sArray.setSensorPins((const uint8_t[]){0, 1, 2, 3, 4, 5, 6, 7}, 8, (gpio_num_t)out_s_front, (gpio_num_t)in_s_front, (gpio_num_t)clk, (gpio_num_t)cs_s_front, 1350000, VSPI_HOST);
   sArray.setSamplesPerSensor(5); // VERIFICARRR
 
-  for (int i = 0; i < 300; i++)
+  for (int i = 0; i < 200; i++)
   {
-    if(i < 200)
+    if(i < 100)
     {
       led_stip.setPixelColor(0,B);
       led_stip.show();
