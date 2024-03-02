@@ -53,7 +53,7 @@ float curva_acel(float pwm_goal)
 
   if (pwm_goal > last_pwm)
   {
-    last_pwm += 5;
+    last_pwm += 10;
     run_pwm = last_pwm;
   }
   else
@@ -139,30 +139,53 @@ struct MotorControlData {
 
 std::vector<MotorControlData> trackMap = {
   //{encoderValueBegin, encoderValueEnd, motorPWM},
-    {0, 220, 120},
-    {223.5,	866.5,	110},
-    {866.5,	1061.6,	170},
-    {1591.5,	1909.0,	108},
-    {1909,	2059.4,	170},
-    {2587.5,	2850.0,	109},
-    {2850,	2875.4,	119},
-    {3300,	5085.5,	210}, //bolona
-    {5448.5,	6644.0,	169},
-    {6769,	6991.0,	126},
-    {6991,	6786.5,	255},
-    {7180.5,	7378.3,	159},
-    {7497.5,	7939.5,	115},
-    {7939.5,	8262.9,	202},
-    {8571.5,	9471.0,	99},
-    {9900,	11300.0,	240}, //reta cruzamento
-    {11987,	13300.5,	115},
-    //{14950,	15956.0,	240},
-    {15956,	18390.5,	130},
-    {18800,	19227.5,	117},
-    {19700.5,	20926.6,	240},
-    {21434,	21833.5,	118},
-    {22400.5,	25500/*24977.7*/,	240},
-    {26300, 999999, 0}
+    {0,	450,	119}, //começo até primeira curva
+    {506,	1064,	144}, // primeira curva
+    {1250,	2050,	237}, //reta pré V
+    {2521,	2947,	167}, // curva de entrada do V
+    {3000,	3442,	174}, // primeira reta do V
+    {3546,	4081,	141}, // V
+    {4300,	5075,	119}, // segunda reta do V
+    {5075,	5566,	151}, // curva saída do V
+    {5900,	6416,	240}, // reta pós V
+    {6880,	8570,	135}, // primeira bola
+    {8700,	9294,	240}, // reta pós primeira bola
+    {9782,	11221,	126}, // segunda bola
+    {11550,	12151,	220}, // reta pós segunda bola
+    {12700,	14351,	240}, // reta pré balão
+    {14670,	17665,	181}, //balão
+    {17665,	18485,	255}, //reta pós balão
+    {18830,	21655,	120}, //zig zag
+    {21950,	22172,	230}, // reta pré 180
+    {22504,	23603,	139}, //180
+    {24000,	25015,	237}, //reta pós 180
+    {25208,	25626,	192}, // curva de quebra de reta
+    {25626,	26024,	210}, //ainda curva de quebra de reta
+    {26500,	26690,	230}, //reta
+    {27052,	28061,	127}, //curva cogumelo
+    {28200,	28489,	180}, //reta pos cogumelo
+    {28490,	30068,	180}, //curva longa
+    //{30200,	30444,	182}, //reta praticamente irrelevante ######verificar#######################
+    //{30690,	31262,	136}, //curva pós reta insignificante
+    //{31262,	31575,	190}, //curva pré reta boa
+    //{32300,	32853,	237}, //reta cruzada 1
+    //{33231,	34019,	135}, //primeira curva do coração
+    //{34019,	34162,	255}, //reta no meio do coração
+    {34622,	35380,	137}, //segunda curva do coração
+    {37000,	37800,	240}, //reta cruzada 2
+    {39000,	39600,	240}, //primeira reta retangulo
+    {39631,	40327,	153}, //curva pós primeira reta do ret
+    {40374,	40862,	136}, //curva do retangulo pré reta boa
+    {41900,	42981,	240}, //reta boa
+    {43381,	43767,	157}, //curva pós reta boa
+    {43767,	44134,	157}, //mais uma reta merda
+    {44545,	44912,	154}, //curva pós reta merda
+    {44912,	45556,	150}, //reta meia bomba
+    {45977,	47213,	150}, //bolão
+    {47500,	47863,	168}, //primeira curva da sequencia final de curvas
+    {47905,	50381,	155}, //final de pista
+    {50591, 54000, 155},
+    {54001, 99999, 0}
 };
 
 void motorControlWithMap(int encVal)
@@ -181,7 +204,7 @@ void motorControlWithMap(int encVal)
         calcula_PID(KpR, KdR);
         controle_motores(pwmDeliveredToMotors);
       }
-      
+
       else
       { 
         calcula_PID(Kp, Kd);
@@ -193,7 +216,7 @@ void motorControlWithMap(int encVal)
   }
   if(not_mapped){
     calcula_PID(Kp, Kd);
-    controle_motores(100);
+    controle_motores(120);
   }
 }
 
@@ -254,8 +277,8 @@ void ler_laterais(void *parameter){
         led_stip.setPixelColor(1, 0, 0, 255);
         led_stip.show();
         // digitalWrite(buzzer, HIGH);  // Ligar o buzzer
-        // vTaskDelay(pdMS_TO_TICKS(40));  // Manter o buzzer ligado por 100ms
-        // digitalWrite(buzzer, LOW);   // Desligar o buzzer
+        vTaskDelay(pdMS_TO_TICKS(30));  // Manter o buzzer ligado por 100ms
+        //digitalWrite(buzzer, LOW);   // Desligar o buzzer
         led_stip.setPixelColor(1, 0, 0, 0);
         led_stip.show();
         readingWhiteLeft = true;
@@ -332,7 +355,23 @@ void callRobotTask(char status)
   break;
 
   case '6': //Propeller
+    static bool firstTimeOnPropeller = true;
+    if(firstTimeOnPropeller == true)
+    {
+       for(int i=1; i<PROPELLER_PWM; i++)
+      {
+        analogWrite(PROPELLER_PIN,i);
+        delay(10);
+      }
+      firstTimeOnPropeller = false;
+    }
     analogWrite(PROPELLER_PIN,PROPELLER_PWM);
+  break;
+
+  default:
+    analogWrite(PWM_LEFT,0);
+    analogWrite(PWM_RIGHT,0);
+    analogWrite(PROPELLER_PIN, 0);
   break;
   }
 }
