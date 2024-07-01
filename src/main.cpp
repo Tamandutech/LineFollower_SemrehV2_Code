@@ -31,10 +31,18 @@ const uint32_t W = led_stip.Color(255,255,255);
 
 u_int64_t tempo;
 
+<<<<<<< HEAD
 char lastReceivedChar = '5';
 int encVal;//################################################################APAGAR
 int acaoIndex, lastActionIndex = 0;
 bool finished_mapping_deploy = true;
+=======
+char lastReceivedChar = '6';
+bool finished_mapping_deploy = true;
+int encVal;//################################################################APAGAR
+int acaoIndex = 0;
+int lastActionIndex = 1;
+>>>>>>> 91ec1f751e37eb9d8ee6e99bf49cff5b666afe0f
 
 void ler_sensores()
 {
@@ -219,6 +227,7 @@ void ler_laterais(void *parameter){
   }
 }
 
+
 void processarAcao(const String& acaoStr) {
   static int acaoIndex = 0; // Mantém o índice da última ação salva
 
@@ -235,6 +244,7 @@ void processarAcao(const String& acaoStr) {
   preferences.putChar(String("CorLED" + String(acaoIndex)).c_str(), corLED);
   preferences.end(); // Fecha a Preferences
 
+<<<<<<< HEAD
   acaoIndex++; // Incrementa o índice para a próxima ação
 
   if (corLED == 'F'){
@@ -243,6 +253,15 @@ void processarAcao(const String& acaoStr) {
   }
   // Log para depuração
   Serial.printf("Ação %d Recebida: %d,%d,%d,%c\n", acaoIndex, limiteInferior, limiteSuperior, velocidadeMotor, corLED);
+=======
+    acaoIndex++; // Incrementa o índice para a próxima ação
+    if (corLED=='F'){
+      finished_mapping_deploy = true;
+      lastReceivedChar = '9';
+    }
+    // Log para depuração
+    Serial.printf("Ação %d Recebida: %d,%d,%d,%c\n", acaoIndex, limiteInferior, limiteSuperior, velocidadeMotor, corLED);
+>>>>>>> 91ec1f751e37eb9d8ee6e99bf49cff5b666afe0f
 }
 
 void callRobotTask(char status)
@@ -272,6 +291,10 @@ void callRobotTask(char status)
   break;
 
   case '4': //Mapping Deploy
+<<<<<<< HEAD
+=======
+    Serial.println(finished_mapping_deploy);
+>>>>>>> 91ec1f751e37eb9d8ee6e99bf49cff5b666afe0f
     finished_mapping_deploy = false;
     static String receivedData;
     if (SerialBT.available()) {
@@ -289,14 +312,20 @@ void callRobotTask(char status)
   case '5': //Read Test
     int quantidade, limiteInferior, limiteSuperior, velocidadeMotor;
     char corLED;
+<<<<<<< HEAD
 
     if(acaoIndex != lastActionIndex) {
       preferences.begin("acoes", true);
       // Lê os valores de cada ação
+=======
+    encVal = (encoder.getCount() + encoder2.getCount()) / 2;
+      preferences.begin("acoes", true);
+>>>>>>> 91ec1f751e37eb9d8ee6e99bf49cff5b666afe0f
       limiteInferior = preferences.getInt(String("LimInf" + String(acaoIndex)).c_str(), 0);
       limiteSuperior = preferences.getInt(String("LimSup" + String(acaoIndex)).c_str(), 0);
       velocidadeMotor = preferences.getInt(String("VelMot" + String(acaoIndex)).c_str(), 0);
       corLED = preferences.getChar(String("CorLED" + String(acaoIndex)).c_str(), 'W');
+<<<<<<< HEAD
       //Serial.printf("Ação %d Recebida: %d,%d,%d,%c,%d\n", acaoIndex, limiteInferior, limiteSuperior, velocidadeMotor, corLED,encVal);
       preferences.end();
       lastActionIndex = acaoIndex;
@@ -310,13 +339,28 @@ void callRobotTask(char status)
         controle_motores(velocidadeMotor);
         //led_stip.setPixelColor(0,corLED);
         //led_stip.show();
+=======
+      preferences.end();
+      Serial.printf("Ação %d Recebida: %d,%d,%d,%c,%d\n", acaoIndex, limiteInferior, limiteSuperior, velocidadeMotor, corLED,encVal);
+      if (encVal>=limiteInferior && encVal < limiteSuperior) {
+
+        ler_sensores();
+        calcula_PID(Kp, Kd);
+        controle_motores(velocidadeMotor);
+        Serial.println(velocidadeMotor);
+        //led_stip.setPixelColor(0,corLED);
+>>>>>>> 91ec1f751e37eb9d8ee6e99bf49cff5b666afe0f
       }
       else {
         acaoIndex++;
       }
+<<<<<<< HEAD
       
     }
     
+=======
+
+>>>>>>> 91ec1f751e37eb9d8ee6e99bf49cff5b666afe0f
   break;
   }
 }
@@ -389,10 +433,17 @@ void bluetoothRead()
 
 void loop()
 {  
+<<<<<<< HEAD
   if(finished_mapping_deploy == true) {
     bluetoothRead();
   }
 
+=======
+  if(finished_mapping_deploy == true){
+    bluetoothRead();
+  }
+    
+>>>>>>> 91ec1f751e37eb9d8ee6e99bf49cff5b666afe0f
   callRobotTask(lastReceivedChar);
 
   led_stip.setPixelColor(0, 0, 255, 0);
