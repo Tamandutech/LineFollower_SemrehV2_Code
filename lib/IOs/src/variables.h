@@ -3,6 +3,7 @@
 
 //Ventoinha
 #define PROPELLER_PIN 5
+#define BRUSHLESS_PIN 5
 
 //ADC sensores frontais
 #define out_s_front 19
@@ -14,8 +15,8 @@
 #define PWM_LEFT 13 // Pino PWM do motor esquerdo
 #define PWM_RIGHT 14 // Pino PWM do motor direito
 
-#define in_esq2	25 // Pino input1 motor esquerdo
-#define in_esq1 21 // Pino input2 motor esquerdo
+#define in_esq2	21 // Pino input1 motor esquerdo
+#define in_esq1 25 // Pino input2 motor esquerdo
 
 #define in_dir1 26 // Pino input1 motor direito
 #define in_dir2 27 // Pino input2 motor direito
@@ -27,10 +28,10 @@
 #define s_lat_dir 33 //33 // Pino sensor lateral direito
 
 //Encoder
-#define enc_eq_A 34 // Pino inputA encoder esquerdo
-#define enc_eq_B 35 // Pino inputB encoder esquerdo
-#define enc_dir_A 16 // Pino inputA encoder direito
-#define enc_dir_B 4 // Pino inputB encoder direito
+#define enc_eq_A 35 // Pino inputA encoder esquerdo
+#define enc_eq_B 34 // Pino inputB encoder esquerdo
+#define enc_dir_A 4 // Pino inputA encoder direito
+#define enc_dir_B 16 // Pino inputB encoder direito
 
 //Alertas
 #define led 32 // Pino dos LEDs
@@ -40,27 +41,43 @@
 #define LED_COUNT 2 // Numero de LEDs
 
 //Valores para os motores
+int leftEncoderPulse = 0;
+int rightEncoderPulse = 0;
+int leftDistanceTravelled = 0;
+int rightDistanceTravelled = 0;
+float robotSpeed = 0;
 float last_pwm = 0;
-
 float run_pwm;
+float translacionalError;
+float lastTranslacionalError;
+float P_Translacional = 0;
+float D_Translacional = 0;
+float I_Translacional = 0;
+float PIDTranslacional = 0;
 
 #define MAX_PWM 255
 
 #define HIGHSPEED_PWM 130
 
-#define MAPPING_PWM 70
+#define MAPPING_PWM 180
 
 #define PROPELLER_PWM 200
 
-//Valores do PID
-float Kp = 0.043; // 0.074  M120 Curva
-float Kd = 0.25; //  0.48   M120 Curva
+#define BRUSHLESSSPEED 150
 
-float KpR = 0.043; // M255
+//Valores do PID
+float Kp = 0.0123; // 0.074  M120 Curva
+float Kd = 0.15; //  0.48   M120 Curva
+
+float KpR = 0.0123; // M255
 float KdR = 0.6; //  M255
 
 float P = 0, D = 0; // Valores de ganho do PID
 float PID = 0; // Valor do ganho do PID total
+
+float KpTrans = 7;
+float KdTrans = 100;
+float KiTrans = 5;
 
 //Valores para leitura do sensores laterais
 #define DEBOUNCETIME 200
@@ -74,6 +91,7 @@ float accumLateralEsq[MED_TAMANHO] = {};
 
 float velesq = 0, veldir = 0; // Valor de PWM do motor
 float velesqrot = 0, veldirrot = 0;
+float velesqTranslacional = 0, veldirTranslacional = 0;
 float erro_sensores = 0; // Erro dos sensores (-3500 < x < 3500)
 float erro_anterior = 0; // Erro anterior dos sensores (-3500 < x < 3500)
 float erro_f = 0; // Erro dos sensores (-3500 < x < 3500)
@@ -96,3 +114,5 @@ float PIDrot = 0;
 float KdParamRot=3;
 float KiParamRot=10;
 
+#define MM_PER_COUNT 0.576
+#define SAMPLING_TIME 10

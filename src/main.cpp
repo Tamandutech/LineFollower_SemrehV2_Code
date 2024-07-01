@@ -4,7 +4,9 @@
 #include <QTRSensors.h>
 #include <Adafruit_NeoPixel.h>
 #include <BluetoothSerial.h>
+#include <ESP32Servo.h>
 
+Servo Brushless;
 ESP32Encoder encoder;
 ESP32Encoder encoder2;
 QTRSensors sArray;
@@ -45,7 +47,6 @@ void calcula_PID_rot(float KpParamRot , float KdParamRot , float KiParamrot){
   I_rot += erro_f_rot;
   PIDrot =(KpParamRot*P_rot)+(KdParamRot*D_rot)+(KiParamRot*I_rot);
   erro_anterior_rot = erro_f_rot;
-  
 }
 
 float curva_acel(float pwm_goal)
@@ -63,6 +64,27 @@ float curva_acel(float pwm_goal)
   return run_pwm;
 }
 
+float translacionalErrorBuffer[9]; // buffer to store the last 5 values of translationalError
+int translacionalErrorIndex = 0; // index to keep track of the current position in the buffer
+void calcula_PID_translacional(float KpParam_Translacional, float KdParam_Translacional,float KiParam_Translacional, float desiredSpeed)
+{
+  translacionalError = desiredSpeed - robotSpeed;
+  P_Translacional = translacionalError;
+  D_Translacional = translacionalError - lastTranslacionalError;
+
+  // update the buffer and calculate the sum of the last 5 values
+  translacionalErrorBuffer[translacionalErrorIndex] = translacionalError;
+  translacionalErrorIndex = (translacionalErrorIndex + 1) % 9;
+  float sum = 0;
+  for (int i = 0; i < 9; i++) {
+    sum += translacionalErrorBuffer[i];
+  }
+  I_Translacional = sum;
+
+  PIDTranslacional = (KpParam_Translacional * P_Translacional) + (KdParam_Translacional * D_Translacional) + (KiParam_Translacional * I_Translacional);
+  lastTranslacionalError = translacionalError;
+}
+
 void controle_motores(float motorPWM)
 {
   velesq = curva_acel(motorPWM) + PID;
@@ -71,30 +93,30 @@ void controle_motores(float motorPWM)
   if(veldir >= 0)
   {
     if(veldir > MAX_PWM) veldir = MAX_PWM;
-    digitalWrite(in_dir1,LOW);
-    digitalWrite(in_dir2,HIGH);
+    analogWrite(in_dir1,LOW);
+    analogWrite(in_dir2,veldir);
   }
   else
   {
     veldir = (-1) * veldir;
-    digitalWrite(in_dir1,HIGH);
-    digitalWrite(in_dir2,LOW);
+    analogWrite(in_dir1,veldir);
+    analogWrite(in_dir2,LOW);
   }
-  analogWrite(PWM_RIGHT,veldir);
+  //analogWrite(PWM_RIGHT,veldir);
 
   if(velesq >= 0)
   {
     if (velesq > MAX_PWM) velesq = MAX_PWM;
-    digitalWrite(in_esq1,LOW);
-    digitalWrite(in_esq2,HIGH);
+    analogWrite(in_esq1,LOW);
+    analogWrite(in_esq2,velesq);
   }
   else
   {
     velesq = (-1) * velesq;
-    digitalWrite(in_esq1,HIGH);
-    digitalWrite(in_esq2,LOW);
+    analogWrite(in_esq1,velesq);
+    analogWrite(in_esq2,LOW);
   }
-  analogWrite(PWM_LEFT,velesq);
+  //analogWrite(PWM_LEFT,velesq);
 }
 
 void controle_motores_rot(float motorPWM)
@@ -131,6 +153,38 @@ void controle_motores_rot(float motorPWM)
   analogWrite(PWM_LEFT,velesqrot);
 }
 
+void controle_motores_translacional()
+{
+  velesq = PIDTranslacional + PID;
+  veldir = PIDTranslacional - PID;
+
+  if(veldir >= 0)
+  {
+    if(veldir > MAX_PWM) veldir = MAX_PWM;
+    analogWrite(in_dir1,LOW);
+    analogWrite(in_dir2,veldir);
+  }
+  else
+  {
+    veldir = (-1) * veldir;
+    analogWrite(in_dir1,veldir);
+    analogWrite(in_dir2,LOW);
+  }
+
+  if(velesq >= 0)
+  {
+    if (velesq > MAX_PWM) velesq = MAX_PWM;
+    analogWrite(in_esq1,LOW);
+    analogWrite(in_esq2,velesq);
+  }
+  else
+  {
+    velesq = (-1) * velesq;
+    analogWrite(in_esq1,velesq);
+    analogWrite(in_esq2,LOW);
+  }
+}
+
 struct MotorControlData {
     float encoderValueBegin;
     float encoderValueEnd;
@@ -139,53 +193,12 @@ struct MotorControlData {
 
 std::vector<MotorControlData> trackMap = {
   //{encoderValueBegin, encoderValueEnd, motorPWM},
-    {0,	450,	119}, //começo até primeira curva
-    {506,	1064,	144}, // primeira curva
-    {1250,	2050,	237}, //reta pré V
-    {2521,	2947,	167}, // curva de entrada do V
-    {3000,	3442,	174}, // primeira reta do V
-    {3546,	4081,	141}, // V
-    {4300,	5075,	119}, // segunda reta do V
-    {5075,	5566,	151}, // curva saída do V
-    {5900,	6416,	240}, // reta pós V
-    {6880,	8570,	135}, // primeira bola
-    {8700,	9294,	240}, // reta pós primeira bola
-    {9782,	11221,	126}, // segunda bola
-    {11550,	12151,	220}, // reta pós segunda bola
-    {12700,	14351,	240}, // reta pré balão
-    {14670,	17665,	181}, //balão
-    {17665,	18485,	255}, //reta pós balão
-    {18830,	21655,	120}, //zig zag
-    {21950,	22172,	230}, // reta pré 180
-    {22504,	23603,	139}, //180
-    {24000,	25015,	237}, //reta pós 180
-    {25208,	25626,	192}, // curva de quebra de reta
-    {25626,	26024,	210}, //ainda curva de quebra de reta
-    {26500,	26690,	230}, //reta
-    {27052,	28061,	127}, //curva cogumelo
-    {28200,	28489,	180}, //reta pos cogumelo
-    {28490,	30068,	180}, //curva longa
-    //{30200,	30444,	182}, //reta praticamente irrelevante ######verificar#######################
-    //{30690,	31262,	136}, //curva pós reta insignificante
-    //{31262,	31575,	190}, //curva pré reta boa
-    //{32300,	32853,	237}, //reta cruzada 1
-    //{33231,	34019,	135}, //primeira curva do coração
-    //{34019,	34162,	255}, //reta no meio do coração
-    {34622,	35380,	137}, //segunda curva do coração
-    {37000,	37800,	240}, //reta cruzada 2
-    {39000,	39600,	240}, //primeira reta retangulo
-    {39631,	40327,	153}, //curva pós primeira reta do ret
-    {40374,	40862,	136}, //curva do retangulo pré reta boa
-    {41900,	42981,	240}, //reta boa
-    {43381,	43767,	157}, //curva pós reta boa
-    {43767,	44134,	157}, //mais uma reta merda
-    {44545,	44912,	154}, //curva pós reta merda
-    {44912,	45556,	150}, //reta meia bomba
-    {45977,	47213,	150}, //bolão
-    {47500,	47863,	168}, //primeira curva da sequencia final de curvas
-    {47905,	50381,	155}, //final de pista
-    {50591, 54000, 155},
-    {54001, 99999, 0}
+  {0,	3000,	200},
+  {4000,	6000,	120},
+  {7300, 16000, 250},
+  {18800, 22000, 170},
+  //{25000, 30000, 60},
+  //{72000, 99999, 0}
 };
 
 void motorControlWithMap(int encVal)
@@ -216,33 +229,68 @@ void motorControlWithMap(int encVal)
   }
   if(not_mapped){
     calcula_PID(Kp, Kd);
-    controle_motores(120);
+    controle_motores(100);
   }
 }
 
 void controle_com_mapeamento(int encVal)
 {
-  if(encVal<200) {calcula_PID(Kp,Kd); controle_motores(120);} //começo de pista lateral direito até primeira marcaçao
-  else if (encVal >= 223 && encVal <= 866) {calcula_PID(Kp,Kd); controle_motores(110);}
-  else if (encVal >= 930 && encVal <= 1061) {calcula_PID(Kp,Kd); controle_motores(255);}
-  else if (encVal >= 1600 && encVal <= 1900) {calcula_PID(Kp,Kd); controle_motores(115);}
-  else if (encVal >= 1940 && encVal <= 2000) {calcula_PID(Kp,Kd); controle_motores(255);}
-  else if (encVal >= 2600 && encVal <= 2700) {calcula_PID(Kp,Kd); controle_motores(115);}
-  else if (encVal >= 2750 && encVal <= 2910) {calcula_PID(Kp,Kd); controle_motores(200);}
-  else if (encVal >= 3407 && encVal <= 5080) {calcula_PID(Kp,Kd); controle_motores(210);} //bolona
-  else if (encVal >= 5450 && encVal <= 6600) {calcula_PID(Kp,Kd); controle_motores(169);}
-  else if (encVal >= 6800 && encVal <= 6900) {calcula_PID(Kp,Kd); controle_motores(126);}
-  else if (encVal >= 7000 && encVal <= 7300) {calcula_PID(Kp,Kd); controle_motores(150);}
-  else if (encVal >= 7950 && encVal <= 8200) {calcula_PID(Kp,Kd); controle_motores(200);}
-  else if (encVal >= 9750 && encVal <= 11300) {calcula_PID(KpR,KdR); controle_motores(240);} //reta cruzamen
-  else if (encVal >= 12300 && encVal <= 13300) {calcula_PID(KpR,KdR); controle_motores(150);} //pós curz
-  else if (encVal >= 13900 && encVal <= 14800) {calcula_PID(KpR,KdR); controle_motores(120);} //180 graus
-  else if (encVal >= 14900 && encVal <= 15800) {calcula_PID(KpR,KdR); controle_motores(240);} //reta antes do zig
-  else if (encVal >= 15801 && encVal <= 18300) {digitalWrite(in_dir1,LOW);digitalWrite(in_dir2,HIGH);analogWrite(PWM_RIGHT,200);digitalWrite(in_esq1,LOW);digitalWrite(in_esq2,HIGH);analogWrite(PWM_LEFT,185);} //zig PARA IR PRA DIREITA AUMENTAR PWM ESQUERDA (AINDA ESTÁ INDO PRA A ESQUERDA)
-  // else if (encVal >= 19800 && encVal <= 21000) {calcula_PID(KpR,KdR); controle_motores(250);}
-  // else if (encVal >= 22000 && encVal <= 25000) {calcula_PID(KpR,KdR); controle_motores(250);}
-  else if (encVal>26500) {analogWrite(PWM_LEFT,0); analogWrite(PWM_RIGHT,0); analogWrite(PROPELLER_PIN, 0);}
-  else{calcula_PID(Kp,Kd); controle_motores(110); led_stip.setPixelColor(0,G);}
+  if(encVal<357) {calcula_PID(Kp,Kd); calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 1.5); controle_motores_translacional();} //começo de pista lateral direito até primeira marcaçao
+  else if(encVal >= 20100 && encVal <= 20437) {calcula_PID(KpR,KdR); calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 4); controle_motores_translacional();}
+  else if(encVal >= 23600 && encVal <= 26000) {calcula_PID(KpR,KdR); calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 5); controle_motores_translacional();}
+  else if(encVal >= 26001 && encVal <= 26200) {calcula_PID(KpR,KdR); calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 4); controle_motores_translacional();}
+  else if(encVal >= 26201 && encVal <= 26400) {calcula_PID(KpR,KdR); calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 3); controle_motores_translacional();}
+  
+  else{calcula_PID(Kp,Kd); calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 2); controle_motores_translacional();}
+}
+
+void controle_com_mapeamento2(int encVal)
+{
+  if(encVal<2750) {calcula_PID(KpR,KdR); controle_motores(230);Brushless.write(55);} //começo de pista lateral direito até primeira marcaçao
+  else if(encVal >= 2750 && encVal <= 4000) {calcula_PID(Kp,Kd); controle_motores(125);Brushless.write(100);} // primeira curva
+  else if(encVal >= 4000 && encVal <= 6500) {calcula_PID(Kp,Kd); controle_motores(125);Brushless.write(100);} // primeira curva
+  else if(encVal >= 7370 && encVal <= 16000) {calcula_PID(KpR,KdR); controle_motores(250); Brushless.write(55);}
+  else if(encVal >= 18400 && encVal <= 22000) {calcula_PID(Kp,Kd); controle_motores(170); Brushless.write(80);}
+  else if(encVal >= 22000 && encVal <= 32000) {calcula_PID(Kp,Kd); controle_motores(160); Brushless.write(145);}
+  // else if(encVal >= 27800 && encVal <= 28500) {calcula_PID(Kp,Kd); controle_motores(100);}
+  //else if(encVal >= 26000 && encVal <= 30000) {calcula_PID(Kp,Kd); controle_motores(70); Brushless.write(30);}
+  // else if(encVal >= 30900 && encVal <= 32700) {calcula_PID(Kp,Kd); controle_motores(130);Brushless.write(90);}
+  // else if(encVal >= 34500 && encVal <= 36000) {calcula_PID(Kp,Kd); controle_motores(95);}
+  else if(encVal >= 32000 && encVal <= 35700) {calcula_PID(Kp,Kd); controle_motores(160);Brushless.write(110);}
+  else if(encVal >= 36750 && encVal <= 40750) {calcula_PID(KpR,KdR); controle_motores(250);Brushless.write(55);} //reta 2
+  else if(encVal >= 41000 && encVal <= 43000) {calcula_PID(Kp,Kd); controle_motores(90);Brushless.write(80);} //curva pós reta 2
+  // //else if(encVal >= 43600 && encVal <= 44000) {calcula_PID(KpR,KdR); controle_motores(90);}
+  else if(encVal >= 43000 && encVal <= 45250) {calcula_PID(Kp,Kd); controle_motores(110); Brushless.write(90);}
+
+
+  else if(encVal >= 45251 && encVal <= 46150) {calcula_PID(Kp,Kd); controle_motores(210);} //Primeira reta cruzada
+
+  else if(encVal >= 47970 && encVal <= 48700) {calcula_PID(Kp,Kd); controle_motores(210);} //Segunda reta cruzada
+
+  else if(encVal >= 50350 && encVal <= 51150) {calcula_PID(Kp,Kd); controle_motores(210);} //Terceira reta cruzada
+
+  else if(encVal >= 53070 && encVal <= 53870) {calcula_PID(Kp,Kd); controle_motores(210);} //Quarta reta cruzada
+
+  else if(encVal >= 55400 && encVal <= 56120) {calcula_PID(Kp,Kd); controle_motores(210);} //Quinta reta cruzada
+
+  else if(encVal >= 58000 && encVal <= 59100) {calcula_PID(Kp,Kd); controle_motores(100); Brushless.write(90);} //Prep Reta 3
+
+  else if(encVal >= 59100 && encVal <= 61000) {calcula_PID(Kp,Kd); controle_motores(210);Brushless.write(70);} //Reta 3
+
+  else if(encVal >= 61000 && encVal <= 62500) {calcula_PID(Kp,Kd); controle_motores(100); Brushless.write(110);} //Prep Reta 4
+
+  else if(encVal >= 62500 && encVal <= 64500) {calcula_PID(Kp,Kd); controle_motores(210); Brushless.write(70);} //Reta 4
+
+  else if(encVal >= 64500 && encVal <= 66000) {calcula_PID(Kp,Kd); controle_motores(100); Brushless.write(100);} //Prep Reta 5
+
+  else if(encVal >= 66500 && encVal <= 67700) {calcula_PID(Kp,Kd); controle_motores(210); Brushless.write(70); led_stip.setPixelColor(0,R); led_stip.show();} //Reta 5
+
+  else if(encVal >= 67800 && encVal <= 70300) {calcula_PID(Kp,Kd); controle_motores(120); Brushless.write(130); led_stip.setPixelColor(0,G); led_stip.show();}
+
+  else if(encVal >= 70300 && encVal <= 74500) {calcula_PID(Kp,Kd); controle_motores(160); Brushless.write(130); led_stip.setPixelColor(0,R); led_stip.show();}
+
+  else if (encVal >= 74500) {calcula_PID(Kp,Kd); controle_motores(0); Brushless.write(0);}
+  else{calcula_PID(Kp,Kd); controle_motores(115); Brushless.write(80);}
 }
 
 void ler_laterais(void *parameter){
@@ -277,7 +325,7 @@ void ler_laterais(void *parameter){
         led_stip.setPixelColor(1, 0, 0, 255);
         led_stip.show();
         // digitalWrite(buzzer, HIGH);  // Ligar o buzzer
-        vTaskDelay(pdMS_TO_TICKS(30));  // Manter o buzzer ligado por 100ms
+        vTaskDelay(pdMS_TO_TICKS(5));  // Manter o buzzer ligado por 100ms
         //digitalWrite(buzzer, LOW);   // Desligar o buzzer
         led_stip.setPixelColor(1, 0, 0, 0);
         led_stip.show();
@@ -285,7 +333,7 @@ void ler_laterais(void *parameter){
         digitalWrite(buzzer, HIGH);
       }
 
-      else if(medLateralEsq > 3500 && medLateralDir < 2000 && readingWhiteRight == false && firstTimeRight == false) //lê apenas marcação direita
+      else if(medLateralEsq > 3000 && medLateralDir < 2900 && readingWhiteRight == false && firstTimeRight == false) //lê apenas marcação direita
       {
         tempo = millis();
         SerialBT.println("INICIO/FIM");
@@ -313,6 +361,27 @@ void ler_laterais(void *parameter){
   }
 }
 
+void ler_laterais2(void *parameter){
+  while(true)
+  {
+    vTaskDelay(pdMS_TO_TICKS(10));  // Pausa de 10ms entre as verificações
+  }
+}
+
+void calculateRobotSpeed(void *parameter) //m/s
+{
+  TickType_t xLastWakeTime = xTaskGetTickCount();
+  while(true)
+  {
+    leftEncoderPulse = encoder.getCount();
+    rightEncoderPulse = encoder2.getCount();
+    vTaskDelayUntil(&xLastWakeTime,pdMS_TO_TICKS(10));  // Pausa de 10ms entre as verificações
+    leftDistanceTravelled = encoder.getCount() - leftEncoderPulse;
+    rightDistanceTravelled = encoder2.getCount() - rightEncoderPulse;
+    robotSpeed = ((leftDistanceTravelled + rightDistanceTravelled)/2)* MM_PER_COUNT / SAMPLING_TIME; //m/s
+  }
+}
+
 char lastReceivedChar = '3'; // = Abort
 
 void bluetoothRead()
@@ -333,9 +402,32 @@ void callRobotTask(char status)
   switch(status)
   {
   case '1': //Map
+    // ler_sensores();
+    // calcula_PID(Kp,Kd);
+    // controle_motores(10);
+    
     ler_sensores();
     calcula_PID(Kp,Kd);
-    controle_motores(MAPPING_PWM);
+    calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 0.75);
+    controle_motores_translacional();
+    // SerialBT.print("Encoder Esquerdo: ");
+    // SerialBT.print(leftDistanceTravelled);
+    // SerialBT.print(" || ");
+    // SerialBT.print("Encoder Direito: ");
+    // SerialBT.print(rightDistanceTravelled);
+    // SerialBT.print(" || ");
+    // SerialBT.print("Velocidade: ");
+    // SerialBT.println(robotSpeed);
+
+    // analogWrite(in_dir1,LOW);
+    // analogWrite(in_dir2,10);
+    // analogWrite(in_esq1,LOW);
+    // analogWrite(in_esq2,10);
+    // SerialBT.print("Encoder Esquerdo: ");
+    // SerialBT.print(leftDistanceTravelled);
+    // SerialBT.print(" || ");
+    // SerialBT.print("Encoder Direito: ");
+    // SerialBT.print(rightDistanceTravelled);
   break;
 
   case '2': //Run with track map
@@ -344,14 +436,29 @@ void callRobotTask(char status)
   break;
 
   case '3': //Abort
-    analogWrite(PWM_LEFT,0);
-    analogWrite(PWM_RIGHT,0);
+    pinMode(in_dir1, OUTPUT);
+    pinMode(in_dir2, OUTPUT);
+    pinMode(in_esq1, OUTPUT);
+    pinMode(in_esq2, OUTPUT);
+
+    digitalWrite(in_dir1,HIGH);
+    digitalWrite(in_dir2,HIGH);
+
+    digitalWrite(in_esq1,HIGH);
+    digitalWrite(in_esq2,HIGH);
+
     analogWrite(PROPELLER_PIN, 0);
+    Brushless.write(0);
   break;
 
-  case '4': //Pausa locomoção
-    analogWrite(PWM_LEFT,0);
-    analogWrite(PWM_RIGHT,0);
+  case '4': //No zig
+    ler_sensores();
+    controle_com_mapeamento((encoder.getCount()+encoder2.getCount())/2);
+  break;
+
+  case '5': //No zig 2 (-240)
+    ler_sensores();
+    controle_com_mapeamento2((encoder.getCount()+encoder2.getCount())/2);
   break;
 
   case '6': //Propeller
@@ -366,6 +473,21 @@ void callRobotTask(char status)
       firstTimeOnPropeller = false;
     }
     analogWrite(PROPELLER_PIN,PROPELLER_PWM);
+  break;
+
+  case '7':
+    static bool firstTimeOnBrushless = true;
+    if(firstTimeOnBrushless == true)
+    {
+      for(int i=1; i<BRUSHLESSSPEED; i++)
+      {
+        Brushless.write(i);
+        //Serial.println(i);
+        delay(25);
+      }
+      firstTimeOnBrushless = false;
+    }
+    Brushless.write(BRUSHLESSSPEED);
   break;
 
   default:
@@ -410,7 +532,7 @@ void setup()
   pinMode(s_lat_esq, INPUT);
   pinMode(s_lat_dir, INPUT);
   pinMode(buzzer, OUTPUT);
-  pinMode(PROPELLER_PIN, OUTPUT);
+  pinMode(BRUSHLESS_PIN, OUTPUT);
   pinMode(boot, INPUT);
 
   led_stip.begin();
@@ -425,6 +547,13 @@ void setup()
 
   encoder.clearCount();
   encoder2.clearCount();
+
+  Brushless.attach(BRUSHLESS_PIN, 1000, 2000);
+
+  Brushless.write(180);
+  delay(5000);
+  Brushless.write(0);
+
 
   sArray.setTypeMCP3008();
   sArray.setSensorPins((const uint8_t[]){0, 1, 2, 3, 4, 5, 6, 7}, 8, (gpio_num_t)out_s_front, (gpio_num_t)in_s_front, (gpio_num_t)clk, (gpio_num_t)cs_s_front, 1350000, VSPI_HOST);
@@ -451,8 +580,7 @@ void setup()
   encoder.clearCount();
   encoder2.clearCount();
 
-  //xTaskCreatePinnedToCore(ler_sens_lat_esq,"Sensor lat esq",4000,NULL,1,NULL,0);
-  //xTaskCreatePinnedToCore(ler_sens_lat_dir,"Sensor lat dir",4000,NULL,1,NULL,0);
+  xTaskCreatePinnedToCore(calculateRobotSpeed,"Velocidade",10000,NULL,1,NULL,1);
   xTaskCreatePinnedToCore(ler_laterais,"Sensores Laterais",4000,NULL,1,NULL,0);
 }
 
