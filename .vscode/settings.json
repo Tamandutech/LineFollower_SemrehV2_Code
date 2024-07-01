@@ -4,6 +4,6 @@
         "iosfwd": "cpp",
         "*.tcc": "cpp"
     },
-    "idf.portWin": "COM13",
+    "idf.portWin": "COM7",
     "idf.flashType": "UART"
 }

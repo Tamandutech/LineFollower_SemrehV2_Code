@@ -32,6 +32,9 @@ const uint32_t W = led_stip.Color(255,255,255);
 u_int64_t tempo;
 
 char lastReceivedChar = '5';
+int encVal;//################################################################APAGAR
+int acaoIndex, lastActionIndex = 0;
+bool finished_mapping_deploy = true;
 
 void ler_sensores()
 {
@@ -217,28 +220,31 @@ void ler_laterais(void *parameter){
 }
 
 void processarAcao(const String& acaoStr) {
-    static int acaoIndex = 0; // Mantém o índice da última ação salva
+  static int acaoIndex = 0; // Mantém o índice da última ação salva
 
-    // Extrai os componentes da ação da string recebida
-    int limiteInferior, limiteSuperior, velocidadeMotor;
-    char corLED;
-    sscanf(acaoStr.c_str(), "%d,%d,%d,%c", &limiteInferior, &limiteSuperior, &velocidadeMotor, &corLED);
+  // Extrai os componentes da ação da string recebida
+  int limiteInferior, limiteSuperior, velocidadeMotor;
+  char corLED;
+  sscanf(acaoStr.c_str(), "%d,%d,%d,%c", &limiteInferior, &limiteSuperior, &velocidadeMotor, &corLED);
 
-    // Salva a ação na flash com um índice único
-    preferences.begin("acoes", false); // Usa o namespace "acoes"
-    preferences.putInt(String("LimInf" + String(acaoIndex)).c_str(), limiteInferior);
-    preferences.putInt(String("LimSup" + String(acaoIndex)).c_str(), limiteSuperior);
-    preferences.putInt(String("VelMot" + String(acaoIndex)).c_str(), velocidadeMotor);
-    preferences.putChar(String("CorLED" + String(acaoIndex)).c_str(), corLED);
-    preferences.end(); // Fecha a Preferences
+  // Salva a ação na flash com um índice único
+  preferences.begin("acoes", false); // Usa o namespace "acoes"
+  preferences.putInt(String("LimInf" + String(acaoIndex)).c_str(), limiteInferior);
+  preferences.putInt(String("LimSup" + String(acaoIndex)).c_str(), limiteSuperior);
+  preferences.putInt(String("VelMot" + String(acaoIndex)).c_str(), velocidadeMotor);
+  preferences.putChar(String("CorLED" + String(acaoIndex)).c_str(), corLED);
+  preferences.end(); // Fecha a Preferences
 
-    acaoIndex++; // Incrementa o índice para a próxima ação
+  acaoIndex++; // Incrementa o índice para a próxima ação
 
-    // Log para depuração
-    Serial.printf("Ação %d Recebida: %d,%d,%d,%c\n", acaoIndex, limiteInferior, limiteSuperior, velocidadeMotor, corLED);
+  if (corLED == 'F'){
+    finished_mapping_deploy = true;
+    lastReceivedChar = '9';
+  }
+  // Log para depuração
+  Serial.printf("Ação %d Recebida: %d,%d,%d,%c\n", acaoIndex, limiteInferior, limiteSuperior, velocidadeMotor, corLED);
 }
-int encVal;//################################################################APAGAR
-int acaoIndex = 0;
+
 void callRobotTask(char status)
 {
   switch(status)
@@ -266,15 +272,16 @@ void callRobotTask(char status)
   break;
 
   case '4': //Mapping Deploy
+    finished_mapping_deploy = false;
     static String receivedData;
     if (SerialBT.available()) {
-        char c = SerialBT.read();
-        if (c == '\n') {
+        char c_received = SerialBT.read();
+        if (c_received == '\n') {
             // Processa a ação recebida
             processarAcao(receivedData);
             receivedData = ""; // Limpa a string para o próximo conjunto de dados
         } else {
-            receivedData += c; // Monta a string com os dados recebidos
+            receivedData += c_received; // Monta a string com os dados recebidos
         }
     }
   break;
@@ -282,29 +289,34 @@ void callRobotTask(char status)
   case '5': //Read Test
     int quantidade, limiteInferior, limiteSuperior, velocidadeMotor;
     char corLED;
-    preferences.begin("acoes", true);
-    
-    // Lê os valores de cada ação
-    limiteInferior = preferences.getInt(String("LimInf" + String(acaoIndex)).c_str(), 0);
-    limiteSuperior = preferences.getInt(String("LimSup" + String(acaoIndex)).c_str(), 0);
-    velocidadeMotor = preferences.getInt(String("VelMot" + String(acaoIndex)).c_str(), 0);
-    corLED = preferences.getChar(String("CorLED" + String(acaoIndex)).c_str(), 'W');
-    Serial.printf("Ação %d Recebida: %d,%d,%d,%c,%d\n", acaoIndex, limiteInferior, limiteSuperior, velocidadeMotor, corLED,encVal);
 
-
-    encVal = (encoder.getCount() + encoder2.getCount()) / 2;
-
-    if (encVal>=limiteInferior && encVal < limiteSuperior) {
-      ler_sensores();
-      calcula_PID(Kp, Kd);
-      controle_motores(velocidadeMotor);
-      led_stip.setPixelColor(0,corLED);
+    if(acaoIndex != lastActionIndex) {
+      preferences.begin("acoes", true);
+      // Lê os valores de cada ação
+      limiteInferior = preferences.getInt(String("LimInf" + String(acaoIndex)).c_str(), 0);
+      limiteSuperior = preferences.getInt(String("LimSup" + String(acaoIndex)).c_str(), 0);
+      velocidadeMotor = preferences.getInt(String("VelMot" + String(acaoIndex)).c_str(), 0);
+      corLED = preferences.getChar(String("CorLED" + String(acaoIndex)).c_str(), 'W');
+      //Serial.printf("Ação %d Recebida: %d,%d,%d,%c,%d\n", acaoIndex, limiteInferior, limiteSuperior, velocidadeMotor, corLED,encVal);
+      preferences.end();
+      lastActionIndex = acaoIndex;
     }
     else {
-      acaoIndex++;
+      encVal = (encoder.getCount() + encoder2.getCount()) / 2;
+
+      if (encVal>=limiteInferior && encVal < limiteSuperior) {
+        ler_sensores();
+        calcula_PID(Kp, Kd);
+        controle_motores(velocidadeMotor);
+        //led_stip.setPixelColor(0,corLED);
+        //led_stip.show();
+      }
+      else {
+        acaoIndex++;
+      }
+      
     }
-    // Executa a ação se estiver dentro do intervalo especificado
-    preferences.end();
+    
   break;
   }
 }
@@ -377,7 +389,9 @@ void bluetoothRead()
 
 void loop()
 {  
-  //bluetoothRead();
+  if(finished_mapping_deploy == true) {
+    bluetoothRead();
+  }
 
   callRobotTask(lastReceivedChar);
 
