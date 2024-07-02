@@ -35,7 +35,6 @@
 
 //Alertas
 #define led 32 // Pino dos LEDs
-#define buzzer 12 // Pino buzzer
 
 //Numero de LEDs NeoPixels na placa
 #define LED_COUNT 2 // Numero de LEDs

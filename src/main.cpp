@@ -324,13 +324,10 @@ void ler_laterais(void *parameter){
         SerialBT.println((encoder.getCount() + encoder2.getCount())/2);
         led_stip.setPixelColor(1, 0, 0, 255);
         led_stip.show();
-        // digitalWrite(buzzer, HIGH);  // Ligar o buzzer
         vTaskDelay(pdMS_TO_TICKS(5));  // Manter o buzzer ligado por 100ms
-        //digitalWrite(buzzer, LOW);   // Desligar o buzzer
         led_stip.setPixelColor(1, 0, 0, 0);
         led_stip.show();
         readingWhiteLeft = true;
-        digitalWrite(buzzer, HIGH);
       }
 
       else if(medLateralEsq > 3000 && medLateralDir < 2900 && readingWhiteRight == false && firstTimeRight == false) //lê apenas marcação direita
@@ -341,9 +338,6 @@ void ler_laterais(void *parameter){
         encoder.clearCount();
         firstTimeRight = true;
         readingWhiteRight = true;
-        digitalWrite(buzzer, HIGH);
-        // vTaskDelay(pdMS_TO_TICKS(40));  // Manter o buzzer ligado por 100ms
-        // digitalWrite(buzzer, LOW);   // Desligar o buzzer
       }
     }
 
@@ -351,20 +345,12 @@ void ler_laterais(void *parameter){
     {
       readingWhiteLeft = false;
       readingWhiteRight = false;
-      digitalWrite(buzzer, LOW);
     }
     medLateralDir = 0;
     medLateralEsq = 0;
 
     countLateral = countLateral % MED_TAMANHO;
     vTaskDelay(pdMS_TO_TICKS(8));  // Pausa de 5ms entre as verificações
-  }
-}
-
-void ler_laterais2(void *parameter){
-  while(true)
-  {
-    vTaskDelay(pdMS_TO_TICKS(10));  // Pausa de 10ms entre as verificações
   }
 }
 
@@ -402,32 +388,10 @@ void callRobotTask(char status)
   switch(status)
   {
   case '1': //Map
-    // ler_sensores();
-    // calcula_PID(Kp,Kd);
-    // controle_motores(10);
-    
     ler_sensores();
     calcula_PID(Kp,Kd);
     calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 0.75);
     controle_motores_translacional();
-    // SerialBT.print("Encoder Esquerdo: ");
-    // SerialBT.print(leftDistanceTravelled);
-    // SerialBT.print(" || ");
-    // SerialBT.print("Encoder Direito: ");
-    // SerialBT.print(rightDistanceTravelled);
-    // SerialBT.print(" || ");
-    // SerialBT.print("Velocidade: ");
-    // SerialBT.println(robotSpeed);
-
-    // analogWrite(in_dir1,LOW);
-    // analogWrite(in_dir2,10);
-    // analogWrite(in_esq1,LOW);
-    // analogWrite(in_esq2,10);
-    // SerialBT.print("Encoder Esquerdo: ");
-    // SerialBT.print(leftDistanceTravelled);
-    // SerialBT.print(" || ");
-    // SerialBT.print("Encoder Direito: ");
-    // SerialBT.print(rightDistanceTravelled);
   break;
 
   case '2': //Run with track map
@@ -482,7 +446,6 @@ void callRobotTask(char status)
       for(int i=1; i<BRUSHLESSSPEED; i++)
       {
         Brushless.write(i);
-        //Serial.println(i);
         delay(25);
       }
       firstTimeOnBrushless = false;
@@ -531,7 +494,6 @@ void setup()
   pinMode(led, OUTPUT);
   pinMode(s_lat_esq, INPUT);
   pinMode(s_lat_dir, INPUT);
-  pinMode(buzzer, OUTPUT);
   pinMode(BRUSHLESS_PIN, OUTPUT);
   pinMode(boot, INPUT);
 
@@ -589,15 +551,4 @@ void loop()
   bluetoothRead();
 
   callRobotTask(lastReceivedChar);
-
-  // digitalWrite(in_dir1,LOW);
-  // digitalWrite(in_dir2,HIGH);
-  // analogWrite(PWM_RIGHT,200);
-
-  // digitalWrite(in_esq1,LOW);
-  // digitalWrite(in_esq2,HIGH);
-  // analogWrite(PWM_LEFT,190);
-
-  // calcula_PID_rot(KpParamRot,KdParamRot,KiParamRot);
-  // controle_motores(140);
 }
