@@ -1,11 +1,24 @@
 <h1 align="center" style="color:white; background-color:black">LineFollower_SemrehV2_Code</h1>
-<h4 align="center">O codigo principal do robô Seguidor de Linha "Semreh" em sua 2° revisão, desenvolvido e projetado pela Tamandutech UFABC.</h4>
+<h4 align="center">The main code of the Line Follower Robot "Semreh" in its 2nd revision, designed and developed by Tamandutech UFABC.</h4>
 
-**Pinout**
+<p align="center"><img src="images\Semreh_V2_brushless.jpg" /> </p>
+
+## Hardware
+- ESP32-WROOM-32 Module
+- ADC - MCP3008
+- 8x QRE1113 as main sensors
+- PCB 1.6mm as Chassis 
+- ESC 4in1 BlHeli 15A
+- 4x Brushless Motors 1103 8000kv
+- LiPo 3S 350 mAh 70C
+
+
+<details>
+    <summary><b>PINOUT - ESP32</b></summary>
 
 **ADC**
 
-| Função | Portas |
+| Function | Port |
 | :---: | :---: |
 | CLK | GPIO18 |
 | OUT ADC | GPIO19 |
@@ -14,14 +27,14 @@
 
 **Laterais**
 
-| Função | Portas |
+| Function | Port |
 | :---: | :---: |
 | OUT Esquerdo | GPIO39 |
 | OUT Direito | GPIO33 |
 
 **Driver Motor**
 
-| Função | Portas |
+| Function | Port |
 | :---: | :---: |
 | PWMA | GPI14 |
 | PWMB | GPIO13 |
@@ -33,7 +46,7 @@
 
 **Encorder**
 
-| Função | Portas |
+| Function | Port |
 | :---: | :---: |
 | OUT Esquerdo A | GPIO34 |
 | OUT Esquerdo B | GPI35 |
@@ -42,12 +55,26 @@
 
 **LEDs - WS2812B**
 
-| Função | Portas |
+| Function | Port |
 | :---: | :---: |
 | IN DATA | GPIO32 |
 
 **Buzzer**
 
-| Função | Portas |
+| Function | Port |
 | :---: | :---: |
 | IN DATA | GPIO12 |
+
+</details>
+
+## Software
+- Programmed in Vscode with PlatformIO.
+- Arduino IDE as Framework.
+- C++
+```CPP
+//Source Code:
+if (line() == true) {
+    run.fast();
+}
+//Just kidding
+```
