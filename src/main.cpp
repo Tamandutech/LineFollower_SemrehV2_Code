@@ -6,6 +6,31 @@
 #include <BluetoothSerial.h>
 #include <ESP32Servo.h>
 
+// #include <vector>
+// #include <iostream>
+
+// Class Map_Data{
+// public:
+//   float leftEncoderCount;
+//   float rightEncoderCount;
+//   float meanEncoderCount;
+//   float leftEncoderDelta;
+//   float rightEncoderDelta;
+//   float meanEncoderDelta;
+//   float curveSpeed;
+//   float lineSpeed;
+//   bool curve;
+
+//   Map_Data(float leftEncoderCount = 0, float rightEncoderCount = 0, float meanEncoderCount = 0,
+//               float leftEncoderDelta = 0, float rightEncoderDelta = 0, float curveSpeed = 0,
+//               float lineSpeed = 0, bool state = false)
+//       : leftEncoderCount(leftEncoderCount), rightEncoderCount(rightEncoderCount), meanEncoderCount((leftEncoderCount + rightEncoderCount)/2),
+//       leftEncoderDelta(leftEncoderDelta), rightEncoderDelta(rightEncoderDelta), meanEncoderDelta((leftEncoderDelta + rightEncoderDelta)/2) curveSpeed(curveSpeed),
+//       lineSpeed(lineSpeed), state(state) {}
+// }
+
+// std::vector<Map_Data> mapDataList;
+
 Servo Brushless;
 ESP32Encoder encoder;
 ESP32Encoder encoder2;
@@ -395,8 +420,40 @@ void callRobotTask(char status)
   break;
 
   case '2': //Run with track map
-    ler_sensores();
-    motorControlWithMap((encoder.getCount()+encoder2.getCount())/2);
+    // while(size_t i < mapDataList.size())
+    // {
+    //   float quantoAndouAteAgora = (encoder.getCount() + encoder2.getCount())/2;
+    //   if(mapDataList[i].meanEncoderCount <= quantoAndouAteAgora)
+    //   {
+    //     if(mapDataList[i].curve == false)
+    //     {
+    //       if(mapDataList[i+1].curve == true)
+    //       {
+    //         float velocidadeCurvaAoQuadrado = pow(mapDataList[i+1].curveSpeed,2);
+    //         float tamanhoDaReta = mapDataList[i].meanEncoderDelta;            
+    //         float quantoAndouAteAgora = (encoder.getCount() + encoder2.getCount())/2;
+    //         float S = quantoAndouAteAgora - mapDataList[i].meanEncoderCount;
+    //         mapDataList[i].lineSpeed = pow(velocidadeCurvaAoQuadrado + 2 * desaceleração * (tamanhoDaReta - S),1/2);
+
+    //         ler_sensores();
+    //         calcula_PID(Kp,Kd);
+    //         calcula_PID_translacional(KpTrans, KdTrans, KiTrans, mapDataList[i].lineSpeed);
+    //         controle_motores_translacional();
+    //       }
+    //     }
+    //     else
+    //     {
+    //       ler_sensores();
+    //       calcula_PID(Kp,Kd);
+    //       calcula_PID_translacional(KpTrans, KdTrans, KiTrans, mapDataList[i].curveSpeed);
+    //       controle_motores_translacional();
+    //     }
+    //   }
+    //   else
+    //   {
+    //     i++;
+    //   }
+    // }
   break;
 
   case '3': //Abort
@@ -421,8 +478,14 @@ void callRobotTask(char status)
   break;
 
   case '5': //No zig 2 (-240)
-    ler_sensores();
-    controle_com_mapeamento2((encoder.getCount()+encoder2.getCount())/2);
+    SerialBT.print(';'); 
+    SerialBT.print(encoder.getCount()); 
+    SerialBT.print(';'); 
+    SerialBT.print(encoder2.getCount());
+    status = '1';
+    lastReceivedChar = '1';
+
+    //mapDataList.push_back(Map_Data(encoder.getCount(), encoder2.getCount()));
   break;
 
   case '6': //Propeller
@@ -451,6 +514,41 @@ void callRobotTask(char status)
       firstTimeOnBrushless = false;
     }
     Brushless.write(BRUSHLESSSPEED);
+  break;
+
+  case '8': //Tratar dados do Map
+    // if(!mapDataList.empty())
+    // {
+    //   for(size_t i = 0; i < mapDataList.size(); i++)
+    //   {
+    //     Map_Data& currentData = mapDatList[i];
+    //     if(i == 0)
+    //     {
+    //       currentData.leftEncoderDelta = currentData.leftEncoderCount;
+    //       currentData.rightEncoderDelta = currentData.rightEncoderCount;
+    //     }
+    //     else
+    //     {
+    //       Map_Data& previousData = mapDataList[i-1];
+    //       currentData.leftEncoderDelta = currentData.leftEncoderCount - previousData.leftEncoderCount;
+    //       currentData.rightEncoderDelta = currentData.rightEncoderCount - previousData.rightEncoderCount;
+    //     }
+    //     currentData.meanEncoderDelta = (currentData.leftEncoderDelta + currentData.rightEncoderDelta)/2;
+    //     if((currentData.leftEncoderDelta - currentData.rightEncoderDelta) <= 50)
+    //     {
+    //       currentData.curve = true;
+    //     }
+    //     else
+    //     {
+    //       currentData.curve = false;
+    //     }
+    //     if(currentData.curve == true)
+    //     {
+    //       currentData.curveSpeed = pow((raioDaCurva*gravity*coeficienteDeAtrito), 1/2);
+    //     }
+    //   }
+    //   SerialBT.println("Terminou o tratamento");
+    // }
   break;
 
   default:
