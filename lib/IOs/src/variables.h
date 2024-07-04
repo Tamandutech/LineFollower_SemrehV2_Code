@@ -120,4 +120,6 @@ float KiParamRot=10;
 #define mmPerPulse 0.576
 #define GRAVITY 9.8
 #define FRICTION 0.577
-#define desaceleracao 0.577
+#define desaceleracao 5
+#define MASS 0.16
+#define BRUSHLESSFORCE 0
