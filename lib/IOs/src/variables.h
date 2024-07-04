@@ -115,3 +115,9 @@ float KiParamRot=10;
 
 #define MM_PER_COUNT 0.576
 #define SAMPLING_TIME 10
+
+#define DISTANCEWHEELTOCENTER 0.126
+#define mmPerPulse 0.576
+#define GRAVITY 9.8
+#define FRICTION 0.577
+#define desaceleracao 0.577

@@ -6,6 +6,7 @@
 #include <BluetoothSerial.h>
 #include <ESP32Servo.h>
 
+// #include <cmath>
 // #include <vector>
 // #include <iostream>
 
@@ -363,6 +364,7 @@ void ler_laterais(void *parameter){
         encoder.clearCount();
         firstTimeRight = true;
         readingWhiteRight = true;
+        //mapDataList.push_back(Map_Data(encoder.getCount(), encoder2.getCount(), (encoder.getCount()+encoder2.getCount())/2));
       }
     }
 
@@ -420,39 +422,190 @@ void callRobotTask(char status)
   break;
 
   case '2': //Run with track map
-    // while(size_t i < mapDataList.size())
+    // if(size_t i < mapDataList.size())
     // {
-    //   float quantoAndouAteAgora = (encoder.getCount() + encoder2.getCount())/2;
-    //   if(mapDataList[i].meanEncoderCount <= quantoAndouAteAgora)
+    //   float quantoAndouAteAgora = (encoder.getCount() + encoder2.getCount())/2; //calcula o quanto já andou até o momento
+    //   if(quantoAndouAteAgora <= mapDataList[i].meanEncoderCount) //se o valor de encoder da marcação for maior do que o quanto andou até o momento
     //   {
-    //     if(mapDataList[i].curve == false)
+    //     if(mapDataList[i].curve == false) //entra no if se for uma reta
     //     {
-    //       if(mapDataList[i+1].curve == true)
+    //       if(mapDataList[i+1].curve == true) //entra no if se o próximo intervalo for uma curva
     //       {
-    //         float velocidadeCurvaAoQuadrado = pow(mapDataList[i+1].curveSpeed,2);
-    //         float tamanhoDaReta = mapDataList[i].meanEncoderDelta;            
-    //         float quantoAndouAteAgora = (encoder.getCount() + encoder2.getCount())/2;
-    //         float S = quantoAndouAteAgora - mapDataList[i].meanEncoderCount;
-    //         mapDataList[i].lineSpeed = pow(velocidadeCurvaAoQuadrado + 2 * desaceleração * (tamanhoDaReta - S),1/2);
+    //         if(i==0) //entra se é o início e a primeira marcação lateral esquerda
+    //         {
+    //           //variáveis para a fórmula
+    //           float velocidadeCurvaAoQuadrado = pow(mapDataList[i+1].curveSpeed,2);
+    //           float tamanhoDaReta = mapDataList[i].meanEncoderDelta;
+    //           float S = (MM_PER_COUNT * (quantoAndouAteAgora))/1000;
+    //           mapDataList[i].lineSpeed = pow(velocidadeCurvaAoQuadrado - 2 * desaceleracao * (tamanhoDaReta - S),1/2); //torricelli para calcular a velocidade máxima da reta em tempo de execução
 
-    //         ler_sensores();
-    //         calcula_PID(Kp,Kd);
-    //         calcula_PID_translacional(KpTrans, KdTrans, KiTrans, mapDataList[i].lineSpeed);
-    //         controle_motores_translacional();
+    //           if(robotSpeed < mapDataList[i].lineSpeed) //entra se a velocidade do robô for menor do que a velocidade da reta
+    //           {
+    //             //controla o robô na pista e tenta chegar a 8m/s(velocidade máxima)
+    //             ler_sensores();
+    //             calcula_PID(Kp,Kd);
+    //             calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 8);
+    //             controle_motores_translacional();
+    //           }
+    //           else //entra se a velocidade do robô for maior ou igual a velocidade máxima, ou seja precisa desacelerar para entrar na curva
+    //           {
+    //             if(robotSpeed > mapDataList[i+1].curveSpeed) //entra se a velocidade do robô for maior do que a velocidade da próxima curva
+    //             {
+    //               //controla o robô na pista e desacelera ao máximo (velocidade == 0)
+    //               ler_sensores();
+    //               calcula_PID(Kp,Kd);
+    //               calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 0);
+    //               controle_motores_translacional();
+    //             }
+    //             else //entra se a velocidade do robô for menor ou igual a velocidade da próxima curva
+    //             {
+    //               //controla o robô na pista e aumenta a velocidade até a velocidade da próxima curva
+    //               ler_sensores();
+    //               calcula_PID(Kp,Kd);
+    //               calcula_PID_translacional(KpTrans, KdTrans, KiTrans, mapDataList[i+1].curveSpeed);
+    //               controle_motores_translacional();
+    //             }
+    //           }
+    //         }
+    //         else //entra apartir da primeira marcação lateral esquerda
+    //         {
+    //           //variáveis para a fórmula
+    //           float velocidadeCurvaAoQuadrado = pow(mapDataList[i+1].curveSpeed,2);
+    //           float tamanhoDaReta = mapDataList[i].meanEncoderDelta;
+    //           float S = (MM_PER_COUNT * (quantoAndouAteAgora - mapDataList[i-1].meanEncoderCount))/1000;
+    //           mapDataList[i].lineSpeed = pow(velocidadeCurvaAoQuadrado - 2 * desaceleracao * (tamanhoDaReta - S),1/2); //torricelli para calcular a velocidade máxima da reta em tempo de execução
+
+    //           if(robotSpeed < mapDataList[i].lineSpeed) //entra se a velocidade do robô for menor do que a velocidade da reta
+    //           {
+    //             //controla o robô na pista e tenta chegar a 8m/s(velocidade máxima)
+    //             ler_sensores();
+    //             calcula_PID(Kp,Kd);
+    //             calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 8);
+    //             controle_motores_translacional();
+    //           }
+    //           else //entra se a velocidade do robô for maior ou igual a velocidade máxima, ou seja precisa desacelerar para entrar na curva
+    //           {
+    //             if(robotSpeed > mapDataList[i+1].curveSpeed) //entra se a velocidade do robô for maior do que a velocidade da próxima curva
+    //             {
+    //               //controla o robô na pista e desacelera ao máximo (velocidade == 0)
+    //               ler_sensores();
+    //               calcula_PID(Kp,Kd);
+    //               calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 0);
+    //               controle_motores_translacional();
+    //             }
+    //             else //entra se a velocidade do robô for menor ou igual a velocidade da próxima curva
+    //             {
+    //               //controla o robô na pista e aumenta a velocidade até a velocidade da próxima curva
+    //               ler_sensores();
+    //               calcula_PID(Kp,Kd);
+    //               calcula_PID_translacional(KpTrans, KdTrans, KiTrans, mapDataList[i+1].curveSpeed);
+    //               controle_motores_translacional();
+    //             }
+    //           }
+    //         }
+    //       }
+    //       else //entra se o próximo intervalo for uma reta
+    //       {
+    //         if(i==0) //entra se é o início e a primeira marcação lateral esquerda
+    //         {
+    //           //variáveis para a fórmula
+    //           float velocidadeCurvaAoQuadrado = pow(mapDataList[i+1].curveSpeed,2);
+    //           float tamanhoDaReta = mapDataList[i].meanEncoderDelta;
+    //           float S = (MM_PER_COUNT * (quantoAndouAteAgora))/1000;
+    //           mapDataList[i].lineSpeed = pow(velocidadeCurvaAoQuadrado - 2 * desaceleracao * (tamanhoDaReta - S),1/2); //torricelli para calcular a velocidade máxima da reta em tempo de execução
+
+    //           if(robotSpeed < mapDataList[i].lineSpeed) //entra se a velocidade do robô for menor do que a velocidade da reta
+    //           {
+    //             //controla o robô na pista e tenta chegar a 8m/s(velocidade máxima)
+    //             ler_sensores();
+    //             calcula_PID(Kp,Kd);
+    //             calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 8);
+    //             controle_motores_translacional();
+    //           }
+    //           else //entra se a velocidade do robô for maior ou igual a velocidade máxima, ou seja precisa desacelerar para entrar na curva
+    //           {
+    //             if(robotSpeed > mapDataList[i+1].curveSpeed) //entra se a velocidade do robô for maior do que a velocidade da próxima curva
+    //             {
+    //               //controla o robô na pista e desacelera ao máximo (velocidade == 0)
+    //               ler_sensores();
+    //               calcula_PID(Kp,Kd);
+    //               calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 0);
+    //               controle_motores_translacional();
+    //             }
+    //             else //entra se a velocidade do robô for menor ou igual a velocidade da próxima curva
+    //             {
+    //               //controla o robô na pista e aumenta a velocidade até a velocidade da próxima curva
+    //               ler_sensores();
+    //               calcula_PID(Kp,Kd);
+    //               calcula_PID_translacional(KpTrans, KdTrans, KiTrans, mapDataList[i+1].curveSpeed);
+    //               controle_motores_translacional();
+    //             }
+    //           }
+    //         }
+    //         else //entra apartir da primeira marcação lateral esquerda
+    //         {
+    //           //variáveis para a fórmula
+    //           float velocidadeCurvaAoQuadrado = pow(mapDataList[i+1].curveSpeed,2);
+    //           float tamanhoDaReta = mapDataList[i].meanEncoderDelta;
+    //           float S = (MM_PER_COUNT * (quantoAndouAteAgora - mapDataList[i-1].meanEncoderCount))/1000;
+    //           mapDataList[i].lineSpeed = pow(velocidadeCurvaAoQuadrado - 2 * desaceleracao * (tamanhoDaReta - S),1/2); //torricelli para calcular a velocidade máxima da reta em tempo de execução
+
+    //           if(robotSpeed < mapDataList[i].lineSpeed) //entra se a velocidade do robô for menor do que a velocidade da reta
+    //           {
+    //             //controla o robô na pista e tenta chegar a 8m/s(velocidade máxima)
+    //             ler_sensores();
+    //             calcula_PID(Kp,Kd);
+    //             calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 8);
+    //             controle_motores_translacional();
+    //           }
+    //           else //entra se a velocidade do robô for maior ou igual a velocidade máxima, ou seja precisa desacelerar para entrar na curva
+    //           {
+    //             if(robotSpeed > mapDataList[i+1].curveSpeed) //entra se a velocidade do robô for maior do que a velocidade da próxima curva
+    //             {
+    //               //controla o robô na pista e desacelera ao máximo (velocidade == 0)
+    //               ler_sensores();
+    //               calcula_PID(Kp,Kd);
+    //               calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 0);
+    //               controle_motores_translacional();
+    //             }
+    //             else //entra se a velocidade do robô for menor ou igual a velocidade da próxima curva
+    //             {
+    //               //controla o robô na pista e aumenta a velocidade até a velocidade da próxima curva
+    //               ler_sensores();
+    //               calcula_PID(Kp,Kd);
+    //               calcula_PID_translacional(KpTrans, KdTrans, KiTrans, mapDataList[i+1].curveSpeed);
+    //               controle_motores_translacional();
+    //             }
+    //           }
+    //         }
     //       }
     //     }
-    //     else
+    //     else //caso não seja uma reta, ou seja curva
     //     {
+    //       //controla o robô na pista com a velocidade para fazer a curva
     //       ler_sensores();
     //       calcula_PID(Kp,Kd);
     //       calcula_PID_translacional(KpTrans, KdTrans, KiTrans, mapDataList[i].curveSpeed);
     //       controle_motores_translacional();
     //     }
     //   }
-    //   else
+    //   else //se ele já passou da marcação lateral, então incrementa o i, indo para o próximo intervalo
     //   {
     //     i++;
     //   }
+    // }
+    // else //se acabou a lista para os motores
+    // {
+    //   pinMode(in_dir1, OUTPUT);
+    //   pinMode(in_dir2, OUTPUT);
+    //   pinMode(in_esq1, OUTPUT);
+    //   pinMode(in_esq2, OUTPUT);
+
+    //   digitalWrite(in_dir1,HIGH);
+    //   digitalWrite(in_dir2,HIGH);
+
+    //   digitalWrite(in_esq1,HIGH);
+    //   digitalWrite(in_esq2,HIGH);
     // }
   break;
 
@@ -485,7 +638,7 @@ void callRobotTask(char status)
     status = '1';
     lastReceivedChar = '1';
 
-    //mapDataList.push_back(Map_Data(encoder.getCount(), encoder2.getCount()));
+    //mapDataList.push_back(Map_Data(encoder.getCount(), encoder2.getCount(), (encoder.getCount()+encoder2.getCount())/2));
   break;
 
   case '6': //Propeller
@@ -517,38 +670,71 @@ void callRobotTask(char status)
   break;
 
   case '8': //Tratar dados do Map
-    // if(!mapDataList.empty())
+    // if(!mapDataList.empty()) //verifica se a lista não está vazia
     // {
-    //   for(size_t i = 0; i < mapDataList.size(); i++)
+    //   for(size_t i = 0; i < mapDataList.size(); i++) //percorre a lista
     //   {
-    //     Map_Data& currentData = mapDatList[i];
-    //     if(i == 0)
+    //     Map_Data& currentData = mapDataList[i]; //pega o endereço do objeto do tipo Map_Data atual a lista
+    //     if(i == 0) //caso seja o primeiro item da lista, a variação de espaço vai ser igual ao quanto o robô andou até agora
     //     {
     //       currentData.leftEncoderDelta = currentData.leftEncoderCount;
     //       currentData.rightEncoderDelta = currentData.rightEncoderCount;
     //     }
-    //     else
+    //     else //se não for o primeiro da lista, a variação de espaço é igual ao quanto ele andou até agora menos o quanto ele andou até a marcação anterior
     //     {
     //       Map_Data& previousData = mapDataList[i-1];
     //       currentData.leftEncoderDelta = currentData.leftEncoderCount - previousData.leftEncoderCount;
     //       currentData.rightEncoderDelta = currentData.rightEncoderCount - previousData.rightEncoderCount;
     //     }
-    //     currentData.meanEncoderDelta = (currentData.leftEncoderDelta + currentData.rightEncoderDelta)/2;
-    //     if((currentData.leftEncoderDelta - currentData.rightEncoderDelta) <= 50)
+    //     currentData.meanEncoderCount = (currentData.leftEncoderDelta + currentData.rightEncoderDelta)/2;
+        
+    //     //transforma o delta pulsos para delta em metros
+    //     float leftEncoderDeltaMeter = (MM_PER_COUNT * currentData.leftEncoderDelta)/1000;
+    //     float rightEncoderDeltaMeter = (MM_PER_COUNT * currentData.rightEncoderDelta)/1000;
+    //     float meanEncoderDeltaMeter = (MM_PER_COUNT * currentData.meanEncoderCount/2)/1000;
+
+    //     currentData.meanEncoderDelta = meanEncoderDeltaMeter;
+
+    //     //calcula o raio da curva
+    //     float curveRadius = abs((DISTANCEWHEELTOCENTER/2) * ((leftEncoderDeltaMeter+rightEncoderDeltaMeter)/(leftEncoderDeltaMeter-rightEncoderDeltaMeter)));
+
+    //     if(curveRadius <= 0.5) //se o raio da curva for menor ou igual do que 50cm(0.5m), então é uma curva 
     //     {
     //       currentData.curve = true;
+    //       currentData.curveSpeed = pow((curveRadius*GRAVITY*FRICTION), 1/2); //calcula a velocidade para fazer a curva
     //     }
-    //     else
+    //     else //se for maior é uma reta
     //     {
     //       currentData.curve = false;
     //     }
-    //     if(currentData.curve == true)
-    //     {
-    //       currentData.curveSpeed = pow((raioDaCurva*gravity*coeficienteDeAtrito), 1/2);
-    //     }
     //   }
-    //   SerialBT.println("Terminou o tratamento");
+
+    //   SerialBT.print("Média Encoder Absoluto ");
+    //   SerialBT.print("\t");
+
+    //   SerialBT.print("Média Encoder Delta ");
+    //   SerialBT.print("\t");
+
+    //   SerialBT.print("Vcurva ");
+    //   SerialBT.print("\t");
+
+    //   SerialBT.print("Curva? ");
+    //   SerialBT.print("\t");
+
+    //   for(short i = 0; i < mapDataList.size(); i++)
+    //   {
+    //     SerialBT.print(mapDataList[i].meanEncoderCount);SerialBT.print("\t");
+    //     SerialBT.print(mapDataList[i].meanEncoderDelta);SerialBT.print("\t");
+    //     SerialBT.print(mapDataList[i].curveSpeed);SerialBT.print("\t");
+    //     SerialBT.print(mapDataList[i].curve);SerialBT.println("\t");
+    //   }
     // }
+    // else
+    // {
+    //   SerialBT.println("A lista está vazia");
+    // }
+    // status = '3';
+    // lastReceivedChar = '3';
   break;
 
   default:
