@@ -74,9 +74,9 @@ float KdR = 0.6; //  M255
 float P = 0, D = 0; // Valores de ganho do PID
 float PID = 0; // Valor do ganho do PID total
 
-float KpTrans = 7;
-float KdTrans = 100;
-float KiTrans = 5;
+float KpTrans = 1.5;
+float KdTrans = 20;
+float KiTrans = 4.6;
 
 //Valores para leitura do sensores laterais
 #define DEBOUNCETIME 200
@@ -120,6 +120,8 @@ float KiParamRot=10;
 #define mmPerPulse 0.576
 #define GRAVITY 9.8
 #define FRICTION 0.577
-#define desaceleracao 5
-#define MASS 0.16
-#define BRUSHLESSFORCE 0
+//#define desaceleracao 5
+#define MASS 0.172
+#define BRUSHLESSFORCE 3.92
+#define MAXSPEED 4
+#define acceleration 5
