@@ -115,19 +115,13 @@ void readFile(fs::FS &fs, const char * path){
 
       String desaccelerationCount = dataString.substring(fourthCommaIndex + 1);
       
-      mapDataList[lineIndex].meanEncoderCount = atof(meanEncoderCount.c_str());
-      mapDataList[lineIndex].curveSpeed = atof(curveSpeed.c_str());
-      mapDataList[lineIndex].accelerationCount = atof(accelerationCount.c_str());
-      mapDataList[lineIndex].desaccelerationCount = atof(desaccelerationCount.c_str());
-      mapDataList[lineIndex].curve = atoi(curve.c_str());
+      float lmeanEncoderCount = atof(meanEncoderCount.c_str());
+      float lcurveSpeed = atof(curveSpeed.c_str());
+      float laccelerationCount = atof(accelerationCount.c_str());
+      float ldesaccelerationCount = atof(desaccelerationCount.c_str());
+      int curve = atoi(curve.c_str());
 
-      SerialBT.println(mapDataList[lineIndex].meanEncoderCount);
-      SerialBT.println(mapDataList[lineIndex].curveSpeed);
-      SerialBT.println(mapDataList[lineIndex].accelerationCount);
-      SerialBT.println(mapDataList[lineIndex].desaccelerationCount);
-      SerialBT.println(mapDataList[lineIndex].curve);
-
-      lineIndex++;
+      mapDataList.push_back(Map_Data(0, 0, lmeanEncoderCount, 0, 0, 0, lcurveSpeed, 0, curve, 0, 0, laccelerationCount, ldesaccelerationCount);
     }
   }
   SerialBT.println("Terminei de passar os dados pra RAM");
@@ -507,13 +501,40 @@ void tratamento()
   {
     if(mapDataList[i].curve == false) //entra se for uma reta
     {
-      //calcula o espaço para aceleração e desaceleração
-      accelerationSpaceMeter = (pow(MAXSPEED,2) - pow(mapDataList[i-1].curveSpeed,2))/(2*acceleration);
-      desaccelerationSpaceMeter = (pow(mapDataList[i+1].curveSpeed,2) - pow(MAXSPEED,2))/(2*acceleration);
+      if (i != mapDataList.size()-1) //entra se não for o ultimo item da lista
+      {
+        if(i != 0) //entra se não for o primiero item da lista
+        {
+          //calcula o espaço para aceleração e desaceleração
+          accelerationSpaceMeter = (pow(MAXSPEED,2) - pow(mapDataList[i-1].curveSpeed,2))/(2*acceleration);
+          desaccelerationSpaceMeter = (pow(mapDataList[i+1].curveSpeed,2) - pow(MAXSPEED,2))/(2*acceleration);
 
-      //transforma metros em pulsos de encoder
-      mapDataList[i].accelerationSpace = (accelerationSpaceMeter/MM_PER_COUNT)/1000;
-      mapDataList[i].desaccelerationSpace = (desaccelerationSpaceMeter/MM_PER_COUNT)/1000;
+          //transforma metros em pulsos de encoder
+          mapDataList[i].accelerationSpace = (accelerationSpaceMeter/MM_PER_COUNT)/1000;
+          mapDataList[i].desaccelerationSpace = (desaccelerationSpaceMeter/MM_PER_COUNT)/1000;
+        }
+        else //entra se for o primeiro item da lista
+        {
+          //calcula o espaço para aceleração e desaceleração
+          accelerationSpaceMeter = (pow(MAXSPEED,2))/(2*acceleration);
+          desaccelerationSpaceMeter = (pow(mapDataList[i+1].curveSpeed,2) - pow(MAXSPEED,2))/(2*acceleration);
+
+          //transforma metros em pulsos de encoder
+          mapDataList[i].accelerationSpace = (accelerationSpaceMeter/MM_PER_COUNT)/1000;
+          mapDataList[i].desaccelerationSpace = (desaccelerationSpaceMeter/MM_PER_COUNT)/1000;
+        }
+      }
+      else //se for o ultimo item da lista
+      {
+        //calcula o espaço para aceleração e desaceleração
+        accelerationSpaceMeter = (pow(MAXSPEED,2) - pow(mapDataList[i-1].curveSpeed,2))/(2*acceleration);
+        desaccelerationSpaceMeter = (pow(2,2) - pow(MAXSPEED,2))/(2*acceleration);
+
+        //transforma metros em pulsos de encoder
+        mapDataList[i].accelerationSpace = (accelerationSpaceMeter/MM_PER_COUNT)/1000;
+        mapDataList[i].desaccelerationSpace = (desaccelerationSpaceMeter/MM_PER_COUNT)/1000;
+      }
+      
     }
     if(i==0)
     {
@@ -662,12 +683,14 @@ void callRobotTask(char status)
   break;
 
   case '6': //Put the Map_Data from flash memory to RAM
-  // static bool firstTimeOnFlashToRAM = true;
-  // if(firstTimeOnFlashToRAM == true)
-  // {
+  static bool firstTimeOnFlashToRAM = true;
+  if(firstTimeOnFlashToRAM == true)
+  {
     readFile(LittleFS, "/Map_Data.txt");
-  //   firstTimeOnFlashToRAM = false;
-  // }
+    firstTimeOnFlashToRAM = false;
+  }
+  status = '2';
+  lastReceivedChar = '2';
   break;
 
   case '7':

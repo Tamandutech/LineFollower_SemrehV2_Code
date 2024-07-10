@@ -122,8 +122,8 @@ float erro_f = 0; // Erro dos sensores (-3500 < x < 3500)
 #define FRICTION 0.577
 //#define desaceleracao 5
 #define MASS 0.172
-#define BRUSHLESSFORCE 3.92
-#define MAXSPEED 4
-#define acceleration 5
+#define BRUSHLESSFORCE 3.0
+#define MAXSPEED 6.0
+#define acceleration 10.0
 
 #define FORMAT_LITTLEFS_IF_FAILED true
