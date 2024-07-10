@@ -461,7 +461,7 @@ void tratamento()
         if(curveRadius <= 0.5) //se o raio da curva for menor ou igual do que 50cm(0.5m), então é uma curva 
         {
           currentData.curve = true;
-          currentData.curveSpeed = pow((curveRadius*FRICTION/MASS)*(MASS*GRAVITY+BRUSHLESSFORCE),0.5); //calcula a velocidade para fazer a curva
+          currentData.curveSpeed = pow((curveRadius*FRICTION)*(GRAVITY+(BRUSHLESSFORCE/MASS)),0.5); //calcula a velocidade para fazer a curva
         }
         else //se for maior é uma reta
         {
@@ -604,7 +604,7 @@ void callRobotTask(char status)
             {
               ler_sensores();
               calcula_PID(Kp,Kd);
-              calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 2.5);
+              calcula_PID_translacional(KpTrans, KdTrans, KiTrans, MAXSPEED);
               controle_motores_translacional();
             }
             else if(quantoAndouAteAgora >= mapDataList[i].desaccelerationCount)
@@ -618,7 +618,7 @@ void callRobotTask(char status)
             {
               ler_sensores();
               calcula_PID(Kp,Kd);
-              calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 2.5);
+              calcula_PID_translacional(KpTrans, KdTrans, KiTrans, MAXSPEED);
               controle_motores_translacional();
             }
           }
