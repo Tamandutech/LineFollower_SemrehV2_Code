@@ -98,20 +98,20 @@ float erro_f = 0; // Erro dos sensores (-3500 < x < 3500)
 
 
 // variáveis globais controle rotacional
-long int enc_esq_pul = 0;
-long int enc_dir_pul = 0;
-long int pul_prev_esq = 0;
-long int pul_prev_dir = 0;
+// long int enc_esq_pul = 0;
+// long int enc_dir_pul = 0;
+// long int pul_prev_esq = 0;
+// long int pul_prev_dir = 0;
 
-float erro_f_rot = 0;
-float erro_anterior_rot = 0;
-float P_rot = 0 ;
-float D_rot = 0;
-float I_rot = 0;
-float KpParamRot=180;
-float PIDrot = 0;
-float KdParamRot=3;
-float KiParamRot=10;
+// float erro_f_rot = 0;
+// float erro_anterior_rot = 0;
+// float P_rot = 0 ;
+// float D_rot = 0;
+// float I_rot = 0;
+// float KpParamRot=180;
+// float PIDrot = 0;
+// float KdParamRot=3;
+// float KiParamRot=10;
 
 #define MM_PER_COUNT 0.576
 #define SAMPLING_TIME 10
@@ -125,3 +125,5 @@ float KiParamRot=10;
 #define BRUSHLESSFORCE 3.92
 #define MAXSPEED 4
 #define acceleration 5
+
+#define FORMAT_LITTLEFS_IF_FAILED true

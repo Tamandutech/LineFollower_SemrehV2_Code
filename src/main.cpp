@@ -55,12 +55,24 @@ const uint32_t G = led_stip.Color(0,255,0);
 const uint32_t B = led_stip.Color(0,0,255);
 const uint32_t W = led_stip.Color(255,255,255);
 
-u_int64_t tempo;
-
 bool FirstTimeOnSwitchCase = true;
 
 long int calculate_rpm_esq();
 long int calculate_rpm_dir();
+
+void writeFile(fs::FS &fs, const char * path, const char * message){
+  File file = fs.open(path, FILE_WRITE);
+  if(!file){
+    SerialBT.println("- failed to open file for writing");
+    return;
+  }
+  if(file.print(message)){
+    SerialBT.println("- file written");
+  } else {
+    SerialBT.println("- write failed");
+  }
+  file.close();
+}
 
 void appendFile(fs::FS &fs, const char * path, const char * message){
   File file = fs.open(path, FILE_APPEND);
@@ -76,10 +88,10 @@ void appendFile(fs::FS &fs, const char * path, const char * message){
   file.close();
 }
 
-void readMapFromFlashMemory() {
-  File file = LittleFS.open("/Map_Data.txt", "r");
-  if (!file) {
-    SerialBT.println("Erro ao abrir arquivo");
+void readFile(fs::FS &fs, const char * path){
+  File file = fs.open(path);
+  if(!file || file.isDirectory()){
+    SerialBT.println("- failed to open file for reading");
     return;
   }
 
@@ -103,9 +115,16 @@ void readMapFromFlashMemory() {
       mapDataList[lineIndex].desaccelerationCount = atof(desaccelerationCount.c_str());
       mapDataList[lineIndex].curve = atoi(curve.c_str());
 
+      SerialBT.println(mapDataList[lineIndex].meanEncoderCount);
+      SerialBT.println(mapDataList[lineIndex].curveSpeed);
+      SerialBT.println(mapDataList[lineIndex].accelerationCount);
+      SerialBT.println(mapDataList[lineIndex].desaccelerationCount);
+      SerialBT.println(mapDataList[lineIndex].curve);
+
       lineIndex++;
     }
   }
+  SerialBT.println("Terminei de passar os dados pra RAM");
   file.close();
 }
 
@@ -124,29 +143,29 @@ void calcula_PID(float KpParam, float KdParam)
   erro_anterior = erro_f;
 }
 
-void calcula_PID_rot(float KpParamRot , float KdParamRot , float KiParamrot){
-  erro_f_rot = (calculate_rpm_esq() - calculate_rpm_dir());
-  P_rot = erro_f_rot;
-  D_rot = erro_f_rot - erro_anterior_rot;
-  I_rot += erro_f_rot;
-  PIDrot =(KpParamRot*P_rot)+(KdParamRot*D_rot)+(KiParamRot*I_rot);
-  erro_anterior_rot = erro_f_rot;
-}
+// void calcula_PID_rot(float KpParamRot , float KdParamRot , float KiParamrot){
+//   erro_f_rot = (calculate_rpm_esq() - calculate_rpm_dir());
+//   P_rot = erro_f_rot;
+//   D_rot = erro_f_rot - erro_anterior_rot;
+//   I_rot += erro_f_rot;
+//   PIDrot =(KpParamRot*P_rot)+(KdParamRot*D_rot)+(KiParamRot*I_rot);
+//   erro_anterior_rot = erro_f_rot;
+// }
 
-float curva_acel(float pwm_goal)
-{
+// float curva_acel(float pwm_goal)
+// {
 
-  if (pwm_goal > last_pwm)
-  {
-    last_pwm += 10;
-    run_pwm = last_pwm;
-  }
-  else
-  {
-    run_pwm = pwm_goal;
-  }
-  return run_pwm;
-}
+//   if (pwm_goal > last_pwm)
+//   {
+//     last_pwm += 10;
+//     run_pwm = last_pwm;
+//   }
+//   else
+//   {
+//     run_pwm = pwm_goal;
+//   }
+//   return run_pwm;
+// }
 
 float translacionalErrorBuffer[9]; // buffer to store the last 5 values of translationalError
 int translacionalErrorIndex = 0; // index to keep track of the current position in the buffer
@@ -169,73 +188,73 @@ void calcula_PID_translacional(float KpParam_Translacional, float KdParam_Transl
   lastTranslacionalError = translacionalError;
 }
 
-void controle_motores(float motorPWM)
-{
-  velesq = curva_acel(motorPWM) + PID;
-  veldir = curva_acel(motorPWM) - PID;
+// void controle_motores(float motorPWM)
+// {
+//   velesq = curva_acel(motorPWM) + PID;
+//   veldir = curva_acel(motorPWM) - PID;
 
-  if(veldir >= 0)
-  {
-    if(veldir > MAX_PWM) veldir = MAX_PWM;
-    analogWrite(in_dir1,LOW);
-    analogWrite(in_dir2,veldir);
-  }
-  else
-  {
-    veldir = (-1) * veldir;
-    analogWrite(in_dir1,veldir);
-    analogWrite(in_dir2,LOW);
-  }
-  //analogWrite(PWM_RIGHT,veldir);
+//   if(veldir >= 0)
+//   {
+//     if(veldir > MAX_PWM) veldir = MAX_PWM;
+//     analogWrite(in_dir1,LOW);
+//     analogWrite(in_dir2,veldir);
+//   }
+//   else
+//   {
+//     veldir = (-1) * veldir;
+//     analogWrite(in_dir1,veldir);
+//     analogWrite(in_dir2,LOW);
+//   }
+//   //analogWrite(PWM_RIGHT,veldir);
 
-  if(velesq >= 0)
-  {
-    if (velesq > MAX_PWM) velesq = MAX_PWM;
-    analogWrite(in_esq1,LOW);
-    analogWrite(in_esq2,velesq);
-  }
-  else
-  {
-    velesq = (-1) * velesq;
-    analogWrite(in_esq1,velesq);
-    analogWrite(in_esq2,LOW);
-  }
-  //analogWrite(PWM_LEFT,velesq);
-}
+//   if(velesq >= 0)
+//   {
+//     if (velesq > MAX_PWM) velesq = MAX_PWM;
+//     analogWrite(in_esq1,LOW);
+//     analogWrite(in_esq2,velesq);
+//   }
+//   else
+//   {
+//     velesq = (-1) * velesq;
+//     analogWrite(in_esq1,velesq);
+//     analogWrite(in_esq2,LOW);
+//   }
+//   //analogWrite(PWM_LEFT,velesq);
+// }
 
-void controle_motores_rot(float motorPWM)
-{
-  velesqrot = motorPWM + PIDrot;
-  veldirrot = motorPWM - PIDrot;
+// void controle_motores_rot(float motorPWM)
+// {
+//   velesqrot = motorPWM + PIDrot;
+//   veldirrot = motorPWM - PIDrot;
 
-  if(veldirrot >= 0)
-  {
-    if(veldirrot > MAX_PWM) veldirrot = MAX_PWM;
-    digitalWrite(in_dir1,LOW);
-    digitalWrite(in_dir2,HIGH);
-  }
-  else
-  {
-    veldirrot = (-1) * veldirrot;
-    digitalWrite(in_dir1,HIGH);
-    digitalWrite(in_dir2,LOW);
-  }
-  analogWrite(PWM_RIGHT,veldirrot);
+//   if(veldirrot >= 0)
+//   {
+//     if(veldirrot > MAX_PWM) veldirrot = MAX_PWM;
+//     digitalWrite(in_dir1,LOW);
+//     digitalWrite(in_dir2,HIGH);
+//   }
+//   else
+//   {
+//     veldirrot = (-1) * veldirrot;
+//     digitalWrite(in_dir1,HIGH);
+//     digitalWrite(in_dir2,LOW);
+//   }
+//   analogWrite(PWM_RIGHT,veldirrot);
 
-  if(velesqrot >= 0)
-  {
-    if (velesqrot > MAX_PWM) velesqrot = MAX_PWM;
-    digitalWrite(in_esq1,LOW);
-    digitalWrite(in_esq2,HIGH);
-  }
-  else
-  {
-    velesqrot = (-1) * velesqrot;
-    digitalWrite(in_esq1,HIGH);
-    digitalWrite(in_esq2,LOW);
-  }
-  analogWrite(PWM_LEFT,velesqrot);
-}
+//   if(velesqrot >= 0)
+//   {
+//     if (velesqrot > MAX_PWM) velesqrot = MAX_PWM;
+//     digitalWrite(in_esq1,LOW);
+//     digitalWrite(in_esq2,HIGH);
+//   }
+//   else
+//   {
+//     velesqrot = (-1) * velesqrot;
+//     digitalWrite(in_esq1,HIGH);
+//     digitalWrite(in_esq2,LOW);
+//   }
+//   analogWrite(PWM_LEFT,velesqrot);
+// }
 
 void controle_motores_translacional()
 {
@@ -269,85 +288,53 @@ void controle_motores_translacional()
   }
 }
 
-void controle_motores_translacional2()
-{
-  velesq = PIDTranslacional;
-  veldir = PIDTranslacional;
+// struct MotorControlData {
+//     float encoderValueBegin;
+//     float encoderValueEnd;
+//     int motorPWM;
+// };
 
-  if(veldir >= 0)
-  {
-    if(veldir > MAX_PWM) veldir = MAX_PWM;
-    analogWrite(in_dir1,LOW);
-    analogWrite(in_dir2,veldir);
-  }
-  else
-  {
-    veldir = (-1) * veldir;
-    analogWrite(in_dir1,veldir);
-    analogWrite(in_dir2,LOW);
-  }
+// std::vector<MotorControlData> trackMap = {
+//   //{encoderValueBegin, encoderValueEnd, motorPWM},
+//   {0,	3000,	200},
+//   {4000,	6000,	120},
+//   {7300, 16000, 250},
+//   {18800, 22000, 170},
+//   //{25000, 30000, 60},
+//   //{72000, 99999, 0}
+// };
 
-  if(velesq >= 0)
-  {
-    if (velesq > MAX_PWM) velesq = MAX_PWM;
-    analogWrite(in_esq1,LOW);
-    analogWrite(in_esq2,velesq);
-  }
-  else
-  {
-    velesq = (-1) * velesq;
-    analogWrite(in_esq1,velesq);
-    analogWrite(in_esq2,LOW);
-  }
-}
+// void motorControlWithMap(int encVal)
+// {
+//   bool not_mapped = true;
+//   for (const auto& MotorControlData : trackMap)
+//   {
+//     float firstEncoderValue = MotorControlData.encoderValueBegin;
+//     float secondEncoderValue = MotorControlData.encoderValueEnd;
+//     int pwmDeliveredToMotors = MotorControlData.motorPWM;
 
-struct MotorControlData {
-    float encoderValueBegin;
-    float encoderValueEnd;
-    int motorPWM;
-};
+//     if (encVal >= firstEncoderValue && encVal <= secondEncoderValue)
+//     {
+//       if(pwmDeliveredToMotors>=220)
+//       {
+//         calcula_PID(KpR, KdR);
+//         controle_motores(pwmDeliveredToMotors);
+//       }
 
-std::vector<MotorControlData> trackMap = {
-  //{encoderValueBegin, encoderValueEnd, motorPWM},
-  {0,	3000,	200},
-  {4000,	6000,	120},
-  {7300, 16000, 250},
-  {18800, 22000, 170},
-  //{25000, 30000, 60},
-  //{72000, 99999, 0}
-};
-
-void motorControlWithMap(int encVal)
-{
-  bool not_mapped = true;
-  for (const auto& MotorControlData : trackMap)
-  {
-    float firstEncoderValue = MotorControlData.encoderValueBegin;
-    float secondEncoderValue = MotorControlData.encoderValueEnd;
-    int pwmDeliveredToMotors = MotorControlData.motorPWM;
-
-    if (encVal >= firstEncoderValue && encVal <= secondEncoderValue)
-    {
-      if(pwmDeliveredToMotors>=220)
-      {
-        calcula_PID(KpR, KdR);
-        controle_motores(pwmDeliveredToMotors);
-      }
-
-      else
-      { 
-        calcula_PID(Kp, Kd);
-        controle_motores(pwmDeliveredToMotors);
-      }
-      not_mapped = false;
-      //return;
-    }
-  }
-  if(not_mapped){
-    calcula_PID(Kp, Kd);
-    controle_motores(100);
-  }
-}
+//       else
+//       { 
+//         calcula_PID(Kp, Kd);
+//         controle_motores(pwmDeliveredToMotors);
+//       }
+//       not_mapped = false;
+//       //return;
+//     }
+//   }
+//   if(not_mapped){
+//     calcula_PID(Kp, Kd);
+//     controle_motores(100);
+//   }
+// }
 
 void controle_com_mapeamento(int encVal)
 {
@@ -358,55 +345,6 @@ void controle_com_mapeamento(int encVal)
   else if(encVal >= 26201 && encVal <= 26400) {calcula_PID(KpR,KdR); calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 3); controle_motores_translacional();}
   
   else{calcula_PID(Kp,Kd); calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 2); controle_motores_translacional();}
-}
-
-void controle_com_mapeamento2(int encVal)
-{
-  if(encVal<2750) {calcula_PID(KpR,KdR); controle_motores(230);Brushless.write(55);} //começo de pista lateral direito até primeira marcaçao
-  else if(encVal >= 2750 && encVal <= 4000) {calcula_PID(Kp,Kd); controle_motores(125);Brushless.write(100);} // primeira curva
-  else if(encVal >= 4000 && encVal <= 6500) {calcula_PID(Kp,Kd); controle_motores(125);Brushless.write(100);} // primeira curva
-  else if(encVal >= 7370 && encVal <= 16000) {calcula_PID(KpR,KdR); controle_motores(250); Brushless.write(55);}
-  else if(encVal >= 18400 && encVal <= 22000) {calcula_PID(Kp,Kd); controle_motores(170); Brushless.write(80);}
-  else if(encVal >= 22000 && encVal <= 32000) {calcula_PID(Kp,Kd); controle_motores(160); Brushless.write(145);}
-  // else if(encVal >= 27800 && encVal <= 28500) {calcula_PID(Kp,Kd); controle_motores(100);}
-  //else if(encVal >= 26000 && encVal <= 30000) {calcula_PID(Kp,Kd); controle_motores(70); Brushless.write(30);}
-  // else if(encVal >= 30900 && encVal <= 32700) {calcula_PID(Kp,Kd); controle_motores(130);Brushless.write(90);}
-  // else if(encVal >= 34500 && encVal <= 36000) {calcula_PID(Kp,Kd); controle_motores(95);}
-  else if(encVal >= 32000 && encVal <= 35700) {calcula_PID(Kp,Kd); controle_motores(160);Brushless.write(110);}
-  else if(encVal >= 36750 && encVal <= 40750) {calcula_PID(KpR,KdR); controle_motores(250);Brushless.write(55);} //reta 2
-  else if(encVal >= 41000 && encVal <= 43000) {calcula_PID(Kp,Kd); controle_motores(90);Brushless.write(80);} //curva pós reta 2
-  // //else if(encVal >= 43600 && encVal <= 44000) {calcula_PID(KpR,KdR); controle_motores(90);}
-  else if(encVal >= 43000 && encVal <= 45250) {calcula_PID(Kp,Kd); controle_motores(110); Brushless.write(90);}
-
-
-  else if(encVal >= 45251 && encVal <= 46150) {calcula_PID(Kp,Kd); controle_motores(210);} //Primeira reta cruzada
-
-  else if(encVal >= 47970 && encVal <= 48700) {calcula_PID(Kp,Kd); controle_motores(210);} //Segunda reta cruzada
-
-  else if(encVal >= 50350 && encVal <= 51150) {calcula_PID(Kp,Kd); controle_motores(210);} //Terceira reta cruzada
-
-  else if(encVal >= 53070 && encVal <= 53870) {calcula_PID(Kp,Kd); controle_motores(210);} //Quarta reta cruzada
-
-  else if(encVal >= 55400 && encVal <= 56120) {calcula_PID(Kp,Kd); controle_motores(210);} //Quinta reta cruzada
-
-  else if(encVal >= 58000 && encVal <= 59100) {calcula_PID(Kp,Kd); controle_motores(100); Brushless.write(90);} //Prep Reta 3
-
-  else if(encVal >= 59100 && encVal <= 61000) {calcula_PID(Kp,Kd); controle_motores(210);Brushless.write(70);} //Reta 3
-
-  else if(encVal >= 61000 && encVal <= 62500) {calcula_PID(Kp,Kd); controle_motores(100); Brushless.write(110);} //Prep Reta 4
-
-  else if(encVal >= 62500 && encVal <= 64500) {calcula_PID(Kp,Kd); controle_motores(210); Brushless.write(70);} //Reta 4
-
-  else if(encVal >= 64500 && encVal <= 66000) {calcula_PID(Kp,Kd); controle_motores(100); Brushless.write(100);} //Prep Reta 5
-
-  else if(encVal >= 66500 && encVal <= 67700) {calcula_PID(Kp,Kd); controle_motores(210); Brushless.write(70); led_stip.setPixelColor(0,R); led_stip.show();} //Reta 5
-
-  else if(encVal >= 67800 && encVal <= 70300) {calcula_PID(Kp,Kd); controle_motores(120); Brushless.write(130); led_stip.setPixelColor(0,G); led_stip.show();}
-
-  else if(encVal >= 70300 && encVal <= 74500) {calcula_PID(Kp,Kd); controle_motores(160); Brushless.write(130); led_stip.setPixelColor(0,R); led_stip.show();}
-
-  else if (encVal >= 74500) {calcula_PID(Kp,Kd); controle_motores(0); Brushless.write(0);}
-  else{calcula_PID(Kp,Kd); controle_motores(115); Brushless.write(80);}
 }
 
 void ler_laterais(void *parameter){
@@ -448,7 +386,6 @@ void ler_laterais(void *parameter){
 
       else if(medLateralEsq > 3000 && medLateralDir < 2900 && readingWhiteRight == false && firstTimeRight == false) //lê apenas marcação direita
       {
-        tempo = millis();
         SerialBT.println("INICIO/FIM");
         encoder2.clearCount();
         encoder.clearCount();
@@ -719,9 +656,12 @@ void callRobotTask(char status)
   break;
 
   case '6': //Put the Map_Data from flash memory to RAM
-    readMapFromFlashMemory();
-    status = '2';
-    lastReceivedChar = '2';
+  // static bool firstTimeOnFlashToRAM = true;
+  // if(firstTimeOnFlashToRAM == true)
+  // {
+    readFile(LittleFS, "/Map_Data.txt");
+  //   firstTimeOnFlashToRAM = false;
+  // }
   break;
 
   case '7':
@@ -747,14 +687,28 @@ void callRobotTask(char status)
     {
       for(int i = 0; i < mapDataList.size(); i++)
       {
-        string meanEncoderCount = to_string(mapDataList[i].meanEncoderCount);
-        string curve = to_string(mapDataList[i].curve);
-        string curveSpeed = to_string(mapDataList[i].curveSpeed);
-        string accelerationCount = to_string(mapDataList[i].accelerationCount);
-        string desaccelerationCount = to_string(mapDataList[i].desaccelerationCount);
+        if (i == 0)
+        {
+          string meanEncoderCount = to_string(mapDataList[i].meanEncoderCount);
+          string curve = to_string(mapDataList[i].curve);
+          string curveSpeed = to_string(mapDataList[i].curveSpeed);
+          string accelerationCount = to_string(mapDataList[i].accelerationCount);
+          string desaccelerationCount = to_string(mapDataList[i].desaccelerationCount);
 
-        string dataString = meanEncoderCount + "," + curve + "," + curveSpeed + "," + accelerationCount + "," + desaccelerationCount + "\n";
-        appendFile(LittleFS, "/Map_Data.txt", dataString.c_str());
+          string dataString = meanEncoderCount + "," + curve + "," + curveSpeed + "," + accelerationCount + "," + desaccelerationCount + "\n";
+          writeFile(LittleFS, "/Map_Data.txt", dataString.c_str());
+        }
+        else
+        {
+          string meanEncoderCount = to_string(mapDataList[i].meanEncoderCount);
+          string curve = to_string(mapDataList[i].curve);
+          string curveSpeed = to_string(mapDataList[i].curveSpeed);
+          string accelerationCount = to_string(mapDataList[i].accelerationCount);
+          string desaccelerationCount = to_string(mapDataList[i].desaccelerationCount);
+
+          string dataString = meanEncoderCount + "," + curve + "," + curveSpeed + "," + accelerationCount + "," + desaccelerationCount + "\n";
+          appendFile(LittleFS, "/Map_Data.txt", dataString.c_str());
+        }
       }
       firstTimeProcess = false;
     }    
@@ -768,25 +722,6 @@ void callRobotTask(char status)
     //analogWrite(PROPELLER_PIN, 0);
   break;
   }
-}
-
-long int calculate_rpm_esq(){
-  Serial.print(enc_esq_pul);
-  Serial.print(", ");
-  Serial.println(pul_prev_esq);
-  enc_esq_pul = encoder.getCount() - pul_prev_esq;
-  pul_prev_esq = encoder.getCount();
-
-  return enc_esq_pul;
-}
-
-long int calculate_rpm_dir(){
-  Serial.print(enc_dir_pul);
-  Serial.print(", ");
-  Serial.println(pul_prev_dir);
-  enc_dir_pul =  encoder2.getCount() - pul_prev_dir;
-  pul_prev_dir = encoder2.getCount();
-  return enc_dir_pul;
 }
 
 void setup()
@@ -825,6 +760,10 @@ void setup()
   delay(5000);
   Brushless.write(0);
 
+  if(!LittleFS.begin(FORMAT_LITTLEFS_IF_FAILED)){
+        SerialBT.println("LittleFS Mount Failed");
+        return;
+  }
 
   sArray.setTypeMCP3008();
   sArray.setSensorPins((const uint8_t[]){0, 1, 2, 3, 4, 5, 6, 7}, 8, (gpio_num_t)out_s_front, (gpio_num_t)in_s_front, (gpio_num_t)clk, (gpio_num_t)cs_s_front, 1350000, VSPI_HOST);
@@ -860,5 +799,4 @@ void loop()
   bluetoothRead();
 
   callRobotTask(lastReceivedChar);
-  //SerialBT.println(robotSpeed);
 }
