@@ -102,13 +102,19 @@ void readFile(fs::FS &fs, const char * path){
     if (dataString.length() > 0) {
       // Separa as informações em um vetor de strings
       int commaIndex = dataString.indexOf(',');
-      int lastCommaIndex = dataString.lastIndexOf(',');
       String meanEncoderCount = dataString.substring(0, commaIndex);
-      String curve = dataString.substring(commaIndex + 1, lastCommaIndex);
-      String curveSpeed = dataString.substring(lastCommaIndex + 1, dataString.indexOf(',', lastCommaIndex + 1));
-      String accelerationCount = dataString.substring(dataString.indexOf(',', lastCommaIndex + 1) + 1, dataString.indexOf(',', dataString.indexOf(',', lastCommaIndex + 1) + 1));
-      String desaccelerationCount = dataString.substring(dataString.indexOf(',', dataString.indexOf(',', lastCommaIndex + 1) + 1) + 1);
 
+      int secondCommaIndex = dataString.indexOf(',', commaIndex + 1);
+      String curve = dataString.substring(commaIndex + 1, secondCommaIndex);
+
+      int thirdCommaIndex = dataString.indexOf(',', secondCommaIndex + 1);
+      String curveSpeed = dataString.substring(secondCommaIndex + 1, thirdCommaIndex);
+
+      int fourthCommaIndex = dataString.indexOf(',', thirdCommaIndex + 1);
+      String accelerationCount = dataString.substring(thirdCommaIndex + 1, fourthCommaIndex);
+
+      String desaccelerationCount = dataString.substring(fourthCommaIndex + 1);
+      
       mapDataList[lineIndex].meanEncoderCount = atof(meanEncoderCount.c_str());
       mapDataList[lineIndex].curveSpeed = atof(curveSpeed.c_str());
       mapDataList[lineIndex].accelerationCount = atof(accelerationCount.c_str());
