@@ -26,17 +26,17 @@ public:
   float meanEncoderDelta;
   float curveSpeed;
   float lineSpeed;
-  bool curve;
+  int curve;
   float accelerationSpace;
   float desaccelerationSpace;
   float accelerationCount;
   float desaccelerationCount;
 
   Map_Data(float leftEncoderCount = 0, float rightEncoderCount = 0, float meanEncoderCount = 0,
-              float leftEncoderDelta = 0, float rightEncoderDelta = 0, float curveSpeed = 0,
-              float lineSpeed = 0, bool state = false, float accelerationSpace = 0,
+              float leftEncoderDelta = 0, float rightEncoderDelta = 0, float meanEncoderDelta = 0, float curveSpeed = 0,
+              float lineSpeed = 0, int curve = 0, float accelerationSpace = 0,
               float desaccelerationSpace = 0, float accelerationCount = 0, float desaccelerationCount = 0)
-      : leftEncoderCount(leftEncoderCount), rightEncoderCount(rightEncoderCount), meanEncoderCount((leftEncoderCount + rightEncoderCount)/2),
+      : leftEncoderCount(leftEncoderCount), rightEncoderCount(rightEncoderCount), meanEncoderCount(meanEncoderCount),
       leftEncoderDelta(leftEncoderDelta), rightEncoderDelta(rightEncoderDelta), meanEncoderDelta((leftEncoderDelta + rightEncoderDelta)/2), curveSpeed(curveSpeed),
       lineSpeed(lineSpeed), curve(curve), accelerationSpace(accelerationSpace), desaccelerationSpace(desaccelerationSpace), accelerationCount(accelerationCount), desaccelerationCount(desaccelerationCount){}
 };
@@ -105,7 +105,7 @@ void readFile(fs::FS &fs, const char * path){
       String meanEncoderCount = dataString.substring(0, commaIndex);
 
       int secondCommaIndex = dataString.indexOf(',', commaIndex + 1);
-      String curve = dataString.substring(commaIndex + 1, secondCommaIndex);
+      String stringCurve = dataString.substring(commaIndex + 1, secondCommaIndex);
 
       int thirdCommaIndex = dataString.indexOf(',', secondCommaIndex + 1);
       String curveSpeed = dataString.substring(secondCommaIndex + 1, thirdCommaIndex);
@@ -119,12 +119,22 @@ void readFile(fs::FS &fs, const char * path){
       float lcurveSpeed = atof(curveSpeed.c_str());
       float laccelerationCount = atof(accelerationCount.c_str());
       float ldesaccelerationCount = atof(desaccelerationCount.c_str());
-      int curve = atoi(curve.c_str());
+      int curve = atoi(stringCurve.c_str());
 
-      mapDataList.push_back(Map_Data(0, 0, lmeanEncoderCount, 0, 0, 0, lcurveSpeed, 0, curve, 0, 0, laccelerationCount, ldesaccelerationCount);
+      SerialBT.println(lmeanEncoderCount);
+      SerialBT.println(lcurveSpeed);
+      SerialBT.println(laccelerationCount);
+      SerialBT.println(ldesaccelerationCount);
+      SerialBT.println(curve);
+      
+      mapDataList.push_back(Map_Data(0.0f, 0.0f, lmeanEncoderCount, 0.0f,0.0f,0.0f,lcurveSpeed,0.0f,curve,0.0f,0.0f,laccelerationCount,ldesaccelerationCount));
     }
   }
   SerialBT.println("Terminei de passar os dados pra RAM");
+  for(short i = 0; i<mapDataList.size();i++)
+  {
+    SerialBT.println(mapDataList[i].meanEncoderCount);
+  }
   file.close();
 }
 
@@ -451,7 +461,7 @@ void tratamento()
 
       if(leftEncoderDeltaMeter == rightEncoderDeltaMeter) //verificação para que não haja divisão por zero no cálculo de curveRadius
       {
-        currentData.curve = false;
+        currentData.curve = 0;
       }
       else
       {
@@ -460,12 +470,12 @@ void tratamento()
 
         if(curveRadius <= 0.5) //se o raio da curva for menor ou igual do que 50cm(0.5m), então é uma curva 
         {
-          currentData.curve = true;
+          currentData.curve = 1;
           currentData.curveSpeed = pow((curveRadius*FRICTION)*(GRAVITY+(BRUSHLESSFORCE/MASS)),0.5); //calcula a velocidade para fazer a curva
         }
         else //se for maior é uma reta
         {
-          currentData.curve = false;
+          currentData.curve = 0;
         }
       }
     }
@@ -499,7 +509,7 @@ void tratamento()
   float desaccelerationSpaceMeter;
   for(int i = 0; i < mapDataList.size(); i++)
   {
-    if(mapDataList[i].curve == false) //entra se for uma reta
+    if(mapDataList[i].curve == 0) //entra se for uma reta
     {
       if (i != mapDataList.size()-1) //entra se não for o ultimo item da lista
       {
@@ -507,33 +517,39 @@ void tratamento()
         {
           //calcula o espaço para aceleração e desaceleração
           accelerationSpaceMeter = (pow(MAXSPEED,2) - pow(mapDataList[i-1].curveSpeed,2))/(2*acceleration);
-          desaccelerationSpaceMeter = (pow(mapDataList[i+1].curveSpeed,2) - pow(MAXSPEED,2))/(2*acceleration);
+          desaccelerationSpaceMeter = -((pow(mapDataList[i+1].curveSpeed,2) - pow(MAXSPEED,2))/(2*acceleration));
 
           //transforma metros em pulsos de encoder
-          mapDataList[i].accelerationSpace = (accelerationSpaceMeter/MM_PER_COUNT)/1000;
-          mapDataList[i].desaccelerationSpace = (desaccelerationSpaceMeter/MM_PER_COUNT)/1000;
+          mapDataList[i].accelerationSpace = (accelerationSpaceMeter/MM_PER_COUNT)*1000;
+          mapDataList[i].desaccelerationSpace = (desaccelerationSpaceMeter/MM_PER_COUNT)*1000;
         }
         else //entra se for o primeiro item da lista
         {
           //calcula o espaço para aceleração e desaceleração
           accelerationSpaceMeter = (pow(MAXSPEED,2))/(2*acceleration);
-          desaccelerationSpaceMeter = (pow(mapDataList[i+1].curveSpeed,2) - pow(MAXSPEED,2))/(2*acceleration);
+          desaccelerationSpaceMeter = -((pow(mapDataList[i+1].curveSpeed,2) - pow(MAXSPEED,2))/(2*acceleration));
 
           //transforma metros em pulsos de encoder
-          mapDataList[i].accelerationSpace = (accelerationSpaceMeter/MM_PER_COUNT)/1000;
-          mapDataList[i].desaccelerationSpace = (desaccelerationSpaceMeter/MM_PER_COUNT)/1000;
+          mapDataList[i].accelerationSpace = (accelerationSpaceMeter/MM_PER_COUNT)*1000;
+          mapDataList[i].desaccelerationSpace = (desaccelerationSpaceMeter/MM_PER_COUNT)*1000;
         }
       }
       else //se for o ultimo item da lista
       {
         //calcula o espaço para aceleração e desaceleração
         accelerationSpaceMeter = (pow(MAXSPEED,2) - pow(mapDataList[i-1].curveSpeed,2))/(2*acceleration);
-        desaccelerationSpaceMeter = (pow(2,2) - pow(MAXSPEED,2))/(2*acceleration);
+        desaccelerationSpaceMeter = -((pow(2,2) - pow(MAXSPEED,2))/(2*acceleration));
 
         //transforma metros em pulsos de encoder
-        mapDataList[i].accelerationSpace = (accelerationSpaceMeter/MM_PER_COUNT)/1000;
-        mapDataList[i].desaccelerationSpace = (desaccelerationSpaceMeter/MM_PER_COUNT)/1000;
+        mapDataList[i].accelerationSpace = (accelerationSpaceMeter/MM_PER_COUNT)*1000.0f;
+        mapDataList[i].desaccelerationSpace = (desaccelerationSpaceMeter/MM_PER_COUNT)*1000.0f;
       }
+      // SerialBT.print(i);
+      // SerialBT.print(" : ");
+      // SerialBT.print(" espacoDesaceleracao ");
+      // SerialBT.print(desaccelerationSpaceMeter);
+      // SerialBT.print(" ");
+      // SerialBT.println(mapDataList[i].desaccelerationSpace);
       
     }
     if(i==0)
@@ -545,7 +561,8 @@ void tratamento()
       }
       else
       {
-        mapDataList[i].accelerationCount = (((mapDataList[i].meanEncoderDelta/MM_PER_COUNT)/1000)/2);
+        mapDataList[i].accelerationCount = (((mapDataList[i].meanEncoderDelta/MM_PER_COUNT)*1000)/2);
+        mapDataList[i].desaccelerationCount = mapDataList[i].meanEncoderCount - (((mapDataList[i].meanEncoderDelta/MM_PER_COUNT)*1000)/2);
       }
     }
     else
@@ -557,7 +574,8 @@ void tratamento()
       }
       else
       {
-        mapDataList[i].accelerationCount = (((mapDataList[i].meanEncoderDelta/MM_PER_COUNT)/1000)/2)+mapDataList[i-1].meanEncoderCount;
+        mapDataList[i].accelerationCount = (((mapDataList[i].meanEncoderDelta/MM_PER_COUNT)*1000)/2) + mapDataList[i-1].meanEncoderCount;
+        mapDataList[i].desaccelerationCount = mapDataList[i].meanEncoderCount - (((mapDataList[i].meanEncoderDelta/MM_PER_COUNT)*1000)/2);
       }
     }
   }
@@ -598,7 +616,7 @@ void callRobotTask(char status)
       {
         if(i != mapDataList.size()-1)
         {
-          if(mapDataList[i].curve == false) //entra no if se for uma reta
+          if(mapDataList[i].curve == 0) //entra no if se for uma reta
           {
             if(quantoAndouAteAgora < mapDataList[i].accelerationCount)
             {
@@ -611,7 +629,7 @@ void callRobotTask(char status)
             {
               ler_sensores();
               calcula_PID(Kp,Kd);
-              calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 1);
+              calcula_PID_translacional(KpTrans, KdTrans, KiTrans, mapDataList[i+1].curveSpeed);
               controle_motores_translacional();
             }
             else
@@ -662,7 +680,7 @@ void callRobotTask(char status)
     analogWrite(in_esq1,255);
     analogWrite(in_esq2,255);
 
-    analogWrite(PROPELLER_PIN, 0);
+    // analogWrite(PROPELLER_PIN, 0);
     Brushless.write(0);
   break;
 
@@ -689,8 +707,8 @@ void callRobotTask(char status)
     readFile(LittleFS, "/Map_Data.txt");
     firstTimeOnFlashToRAM = false;
   }
-  status = '2';
-  lastReceivedChar = '2';
+  // status = '2';
+  // lastReceivedChar = '2';
   break;
 
   case '7':
@@ -705,6 +723,8 @@ void callRobotTask(char status)
       firstTimeOnBrushless = false;
     }
     Brushless.write(BRUSHLESSSPEED);
+    // status = '2';
+    // lastReceivedChar = '2';
   break;
 
   case '8': //Tratamento

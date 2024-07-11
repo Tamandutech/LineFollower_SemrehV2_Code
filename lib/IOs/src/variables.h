@@ -62,7 +62,7 @@ float PIDTranslacional = 0;
 
 #define PROPELLER_PWM 200
 
-#define BRUSHLESSSPEED 150
+#define BRUSHLESSSPEED 130   //100graus = 235g   125graus = 300g    150graus = 385g
 
 //Valores do PID
 float Kp = 0.0123; // 0.074  M120 Curva
@@ -113,17 +113,17 @@ float erro_f = 0; // Erro dos sensores (-3500 < x < 3500)
 // float KdParamRot=3;
 // float KiParamRot=10;
 
-#define MM_PER_COUNT 0.576
+float MM_PER_COUNT = 0.576f;
 #define SAMPLING_TIME 10
 
-#define DISTANCEWHEELTOCENTER 0.126
+float DISTANCEWHEELTOCENTER = 0.126f;
 #define mmPerPulse 0.576
-#define GRAVITY 9.8
-#define FRICTION 0.577
+float GRAVITY = 9.8f;
+float FRICTION = 0.577f;
 //#define desaceleracao 5
-#define MASS 0.172
-#define BRUSHLESSFORCE 3.0
-#define MAXSPEED 6.0
-#define acceleration 10.0
+float MASS = 0.172f;
+float BRUSHLESSFORCE = 3.0f;
+float MAXSPEED = 4.5f;
+float acceleration = 15.0f;
 
 #define FORMAT_LITTLEFS_IF_FAILED true
