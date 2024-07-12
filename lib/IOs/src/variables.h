@@ -74,7 +74,7 @@ float KdR = 0.6; //  M255
 float P = 0, D = 0; // Valores de ganho do PID
 float PID = 0; // Valor do ganho do PID total
 
-float KpTrans = 1.5;
+float KpTrans = 1;
 float KdTrans = 20;
 float KiTrans = 4.6;
 

@@ -88,6 +88,14 @@ void appendFile(fs::FS &fs, const char * path, const char * message){
   file.close();
 }
 
+void deleteFile(fs::FS &fs, const char * path){
+    if(fs.remove(path)){
+        SerialBT.println("- file deleted");
+    } else {
+        SerialBT.println("- delete failed");
+    }
+}
+
 void readFile(fs::FS &fs, const char * path){
   File file = fs.open(path);
   if(!file || file.isDirectory()){
@@ -121,20 +129,24 @@ void readFile(fs::FS &fs, const char * path){
       float ldesaccelerationCount = atof(desaccelerationCount.c_str());
       int curve = atoi(stringCurve.c_str());
 
-      SerialBT.println(lmeanEncoderCount);
-      SerialBT.println(lcurveSpeed);
-      SerialBT.println(laccelerationCount);
-      SerialBT.println(ldesaccelerationCount);
+      SerialBT.print(lmeanEncoderCount);
+      SerialBT.print(" ");
+      SerialBT.print(lcurveSpeed);
+      SerialBT.print(" ");
+      SerialBT.print(laccelerationCount);
+      SerialBT.print(" ");
+      SerialBT.print(ldesaccelerationCount);
+      SerialBT.print(" ");
       SerialBT.println(curve);
       
       mapDataList.push_back(Map_Data(0.0f, 0.0f, lmeanEncoderCount, 0.0f,0.0f,0.0f,lcurveSpeed,0.0f,curve,0.0f,0.0f,laccelerationCount,ldesaccelerationCount));
     }
   }
   SerialBT.println("Terminei de passar os dados pra RAM");
-  for(short i = 0; i<mapDataList.size();i++)
-  {
-    SerialBT.println(mapDataList[i].meanEncoderCount);
-  }
+  // for(short i = 0; i<mapDataList.size();i++)
+  // {
+  //   SerialBT.println(mapDataList[i].meanEncoderCount);
+  // }
   file.close();
 }
 
@@ -480,24 +492,24 @@ void tratamento()
       }
     }
 
-    SerialBT.print("Media Encoder Absoluto ");
-    SerialBT.print("\t");
+    // SerialBT.print("Media Encoder Absoluto ");
+    // SerialBT.print("\t");
 
-    SerialBT.print("Media Encoder Delta ");
-    SerialBT.print("\t");
+    // SerialBT.print("Media Encoder Delta ");
+    // SerialBT.print("\t");
 
-    SerialBT.print("Vcurva ");
-    SerialBT.print("\t");
+    // SerialBT.print("Vcurva ");
+    // SerialBT.print("\t");
 
-    SerialBT.print("Curva? ");
-    SerialBT.println("\t");
+    // SerialBT.print("Curva? ");
+    // SerialBT.println("\t");
 
     for(short i = 0; i < mapDataList.size(); i++)
     {
-      SerialBT.print(mapDataList[i].meanEncoderCount);SerialBT.print("\t");
-      SerialBT.print(mapDataList[i].meanEncoderDelta);SerialBT.print("\t");
-      SerialBT.print(mapDataList[i].curveSpeed);SerialBT.print("\t");
-      SerialBT.print(mapDataList[i].curve);SerialBT.println("\t");
+      // SerialBT.print(mapDataList[i].meanEncoderCount);SerialBT.print("\t");
+      // SerialBT.print(mapDataList[i].meanEncoderDelta);SerialBT.print("\t");
+      // SerialBT.print(mapDataList[i].curveSpeed);SerialBT.print("\t");
+      SerialBT.println(mapDataList[i].curve);
     }
   }
   else
@@ -612,7 +624,33 @@ void callRobotTask(char status)
     if(i < mapDataList.size())
     {
       float quantoAndouAteAgora = (encoder.getCount() + encoder2.getCount())/2; //calcula o quanto já andou até o momento
-      if(quantoAndouAteAgora <= mapDataList[i].meanEncoderCount) //se o valor de encoder da marcação for maior do que o quanto andou até o momento
+      if (quantoAndouAteAgora > 4729.0 && quantoAndouAteAgora < 5403.0)
+      {
+        static bool primeiraVez = true;
+        ler_sensores();
+        calcula_PID(Kp,Kd);
+        calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 1.5);
+        controle_motores_translacional();
+        if(primeiraVez == true)
+        {
+          i++;
+          primeiraVez = false;
+        }
+      }
+      else if (quantoAndouAteAgora > 41112.5 && quantoAndouAteAgora < 42312.0)
+      {
+        static bool segundaVez = true;
+        ler_sensores();
+        calcula_PID(Kp,Kd);
+        calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 1.3);
+        controle_motores_translacional();
+        if(segundaVez == true)
+        {
+          i = i+3;
+          segundaVez = false;
+        }
+      }
+      else if(quantoAndouAteAgora <= mapDataList[i].meanEncoderCount) //se o valor de encoder da marcação for maior do que o quanto andou até o momento
       {
         if(i != mapDataList.size()-1)
         {
@@ -629,7 +667,7 @@ void callRobotTask(char status)
             {
               ler_sensores();
               calcula_PID(Kp,Kd);
-              calcula_PID_translacional(KpTrans, KdTrans, KiTrans, mapDataList[i+1].curveSpeed);
+              calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 2.0);
               controle_motores_translacional();
             }
             else
@@ -644,7 +682,7 @@ void callRobotTask(char status)
           {
             ler_sensores();
             calcula_PID(Kp,Kd);
-            calcula_PID_translacional(KpTrans, KdTrans, KiTrans, mapDataList[i].curveSpeed);
+            calcula_PID_translacional(KpTrans, KdTrans, KiTrans, (mapDataList[i].curveSpeed));
             controle_motores_translacional();
           }
         }
@@ -653,7 +691,7 @@ void callRobotTask(char status)
           //controla o robô na pista com a velocidade para fazer a curva
           ler_sensores();
           calcula_PID(Kp,Kd);
-          calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 2);
+          calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 3.0);
           controle_motores_translacional();
         }
       }
@@ -684,9 +722,96 @@ void callRobotTask(char status)
     Brushless.write(0);
   break;
 
-  case '4': //No zig
-    ler_sensores();
-    controle_com_mapeamento((encoder.getCount()+encoder2.getCount())/2);
+  case '4': //Safe
+    static short i2 = 0;
+    if(i < mapDataList.size())
+    {
+      float quantoAndouAteAgora = (encoder.getCount() + encoder2.getCount())/2; //calcula o quanto já andou até o momento
+      if (quantoAndouAteAgora > 4729.0 && quantoAndouAteAgora < 5403.0)
+      {
+        static bool primeiraVez = true;
+        ler_sensores();
+        calcula_PID(Kp,Kd);
+        calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 1.5);
+        controle_motores_translacional();
+        if(primeiraVez == true)
+        {
+          i2++;
+          primeiraVez = false;
+        }
+      }
+      else if (quantoAndouAteAgora > 41112.5 && quantoAndouAteAgora < 42312.0)
+      {
+        static bool segundaVez = true;
+        ler_sensores();
+        calcula_PID(Kp,Kd);
+        calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 1.3);
+        controle_motores_translacional();
+        if(segundaVez == true)
+        {
+          i2 = i2+3;
+          segundaVez = false;
+        }
+      }
+      else if(quantoAndouAteAgora <= mapDataList[i2].meanEncoderCount) //se o valor de encoder da marcação for maior do que o quanto andou até o momento
+      {
+        if(i2 != mapDataList.size()-1)
+        {
+          if(mapDataList[i].curve == 0) //entra no if se for uma reta
+          {
+            if(quantoAndouAteAgora < mapDataList[i2].accelerationCount)
+            {
+              ler_sensores();
+              calcula_PID(Kp,Kd);
+              calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 4.0);
+              controle_motores_translacional();
+            }
+            else if(quantoAndouAteAgora >= mapDataList[i2].desaccelerationCount)
+            {
+              ler_sensores();
+              calcula_PID(Kp,Kd);
+              calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 1.3);
+              controle_motores_translacional();
+            }
+            else
+            {
+              ler_sensores();
+              calcula_PID(Kp,Kd);
+              calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 4.0);
+              controle_motores_translacional();
+            }
+          }
+          else //caso não seja uma reta, ou seja curva
+          {
+            ler_sensores();
+            calcula_PID(Kp,Kd);
+            calcula_PID_translacional(KpTrans, KdTrans, KiTrans, (mapDataList[i2].curveSpeed));
+            controle_motores_translacional();
+          }
+        }
+        else //é o ultimo valor da lista
+        {
+          //controla o robô na pista com a velocidade para fazer a curva
+          ler_sensores();
+          calcula_PID(Kp,Kd);
+          calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 3.0);
+          controle_motores_translacional();
+        }
+      }
+      else //se ele já passou da marcação lateral, então incrementa o i, indo para o próximo intervalo
+      {
+        i2++;
+      }
+    }
+    else //se acabou a lista para os motores
+    {
+      analogWrite(in_dir1,255);
+      analogWrite(in_dir2,255);
+
+      analogWrite(in_esq1,255);
+      analogWrite(in_esq2,255);
+      Brushless.write(0);
+    }
   break;
 
   case '5': //adiciona marcação
@@ -696,6 +821,7 @@ void callRobotTask(char status)
     // SerialBT.print(encoder2.getCount());
     status = '1';
     lastReceivedChar = '1';
+    SerialBT.println(robotSpeed);
 
     mapDataList.push_back(Map_Data(encoder.getCount(), encoder2.getCount(), (encoder.getCount()+encoder2.getCount())/2));
   break;
@@ -839,6 +965,8 @@ void setup()
   encoder.clearCount();
   encoder2.clearCount();
 
+  // deleteFile(LittleFS, "/Map_Data2.txt");
+
   xTaskCreatePinnedToCore(calculateRobotSpeed,"Velocidade",10000,NULL,1,NULL,1);
   //xTaskCreatePinnedToCore(ler_laterais,"Sensores Laterais",4000,NULL,1,NULL,0);
 }
@@ -848,4 +976,8 @@ void loop()
   bluetoothRead();
 
   callRobotTask(lastReceivedChar);
+  // SerialBT.print(encoder.getCount());
+  // SerialBT.print(" || ");
+  // SerialBT.println(encoder2.getCount());
+  // SerialBT.println(robotSpeed);
 }
