@@ -174,26 +174,47 @@ void calcula_PID(float KpParam, float KdParam)
 //   erro_anterior_rot = erro_f_rot;
 // }
 
-// float curva_acel(float pwm_goal)
-// {
+float curva_acel(float pwm_goal)
+{
 
-//   if (pwm_goal > last_pwm)
-//   {
-//     last_pwm += 10;
-//     run_pwm = last_pwm;
-//   }
-//   else
-//   {
-//     run_pwm = pwm_goal;
-//   }
-//   return run_pwm;
-// }
+  if (pwm_goal > last_pwm)
+  {
+    run_pwm = pwm_goal;
+  }
+  else if (pwm_goal < last_pwm)
+  {
+    last_pwm -= 0.04f;
+    run_pwm = pwm_goal;
+  }
+  else
+  {
+    run_pwm = pwm_goal;
+  }
+  return run_pwm;
+}
 
 float translacionalErrorBuffer[9]; // buffer to store the last 5 values of translationalError
 int translacionalErrorIndex = 0; // index to keep track of the current position in the buffer
+
+// int delta_time = micros();
+// int last_time = 0;
+// int n_pid = 0;
+
 void calcula_PID_translacional(float KpParam_Translacional, float KdParam_Translacional,float KiParam_Translacional, float desiredSpeed)
 {
-  translacionalError = desiredSpeed - robotSpeed;
+  // delta_time = micros() - last_time;
+  // last_time = micros();
+
+  // if (n_pid > 10)
+  // {
+  //   SerialBT.println(delta_time);
+  //   n_pid = 0;
+  // }
+  // else
+  // {
+  //   n_pid++;
+  // }
+  translacionalError = curva_acel(desiredSpeed) - robotSpeed;
   P_Translacional = translacionalError;
   D_Translacional = translacionalError - lastTranslacionalError;
 
@@ -637,7 +658,20 @@ void callRobotTask(char status)
           primeiraVez = false;
         }
       }
-      else if (quantoAndouAteAgora > 41112.5 && quantoAndouAteAgora < 42312.0)
+      else if (quantoAndouAteAgora > 26240.5 && quantoAndouAteAgora < 27265.5)
+      {
+        static bool segundaVez = true;
+        ler_sensores();
+        calcula_PID(Kp,Kd);
+        calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 1.41);
+        controle_motores_translacional();
+        if(segundaVez == true)
+        {
+          i = i+2;
+          segundaVez = false;
+        }
+      }
+      else if (quantoAndouAteAgora > 39576.5 && quantoAndouAteAgora < 42665.5)
       {
         static bool segundaVez = true;
         ler_sensores();
@@ -646,7 +680,7 @@ void callRobotTask(char status)
         controle_motores_translacional();
         if(segundaVez == true)
         {
-          i = i+3;
+          i = i+6;
           segundaVez = false;
         }
       }
@@ -667,7 +701,7 @@ void callRobotTask(char status)
             {
               ler_sensores();
               calcula_PID(Kp,Kd);
-              calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 2.0);
+              calcula_PID_translacional(KpTrans, KdTrans, KiTrans, mapDataList[i+1].curveSpeed);
               controle_motores_translacional();
             }
             else
@@ -682,7 +716,7 @@ void callRobotTask(char status)
           {
             ler_sensores();
             calcula_PID(Kp,Kd);
-            calcula_PID_translacional(KpTrans, KdTrans, KiTrans, (mapDataList[i].curveSpeed));
+            calcula_PID_translacional(KpTrans, KdTrans, KiTrans, (mapDataList[i].curveSpeed-0.25f));
             controle_motores_translacional();
           }
         }
@@ -871,7 +905,7 @@ void callRobotTask(char status)
           string desaccelerationCount = to_string(mapDataList[i].desaccelerationCount);
 
           string dataString = meanEncoderCount + "," + curve + "," + curveSpeed + "," + accelerationCount + "," + desaccelerationCount + "\n";
-          writeFile(LittleFS, "/Map_Data.txt", dataString.c_str());
+          writeFile(LittleFS, "/Map_Data2.txt", dataString.c_str());
         }
         else
         {
@@ -882,7 +916,7 @@ void callRobotTask(char status)
           string desaccelerationCount = to_string(mapDataList[i].desaccelerationCount);
 
           string dataString = meanEncoderCount + "," + curve + "," + curveSpeed + "," + accelerationCount + "," + desaccelerationCount + "\n";
-          appendFile(LittleFS, "/Map_Data.txt", dataString.c_str());
+          appendFile(LittleFS, "/Map_Data2.txt", dataString.c_str());
         }
       }
       firstTimeProcess = false;
