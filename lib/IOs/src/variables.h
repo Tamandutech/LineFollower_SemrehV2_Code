@@ -62,7 +62,8 @@ float PIDTranslacional = 0;
 
 #define PROPELLER_PWM 200
 
-#define BRUSHLESSSPEED 130   //100graus = 235g   125graus = 300g    150graus = 385g
+#define BRUSHLESSSPEED 145   //100graus = 235g   125graus = 300g    150graus = 385g
+#define BRUSHLESSSPEED2 165
 
 //Valores do PID
 float Kp = 0.0123; // 0.074  M120 Curva
@@ -124,6 +125,7 @@ float FRICTION = 0.577f;
 float MASS = 0.172f;
 float BRUSHLESSFORCE = 3.0f;
 float MAXSPEED = 4.0f;
+float MAXSPEED2 = 4.5f;
 float acceleration = 15.0f;
 
 #define FORMAT_LITTLEFS_IF_FAILED true

@@ -774,7 +774,20 @@ void callRobotTask(char status)
           primeiraVez = false;
         }
       }
-      else if (quantoAndouAteAgora > 41112.5 && quantoAndouAteAgora < 42312.0)
+      else if (quantoAndouAteAgora > 26240.5 && quantoAndouAteAgora < 27265.5)
+      {
+        static bool segundaVez = true;
+        ler_sensores();
+        calcula_PID(Kp,Kd);
+        calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 1.41);
+        controle_motores_translacional();
+        if(segundaVez == true)
+        {
+          i2 = i2+2;
+          segundaVez = false;
+        }
+      }
+      else if (quantoAndouAteAgora > 39576.5 && quantoAndouAteAgora < 42665.5)
       {
         static bool segundaVez = true;
         ler_sensores();
@@ -783,7 +796,7 @@ void callRobotTask(char status)
         controle_motores_translacional();
         if(segundaVez == true)
         {
-          i2 = i2+3;
+          i2 = i2+6;
           segundaVez = false;
         }
       }
@@ -797,7 +810,7 @@ void callRobotTask(char status)
             {
               ler_sensores();
               calcula_PID(Kp,Kd);
-              calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 4.0);
+              calcula_PID_translacional(KpTrans, KdTrans, KiTrans, MAXSPEED2);
               controle_motores_translacional();
             }
             else if(quantoAndouAteAgora >= mapDataList[i2].desaccelerationCount)
@@ -811,7 +824,7 @@ void callRobotTask(char status)
             {
               ler_sensores();
               calcula_PID(Kp,Kd);
-              calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 4.0);
+              calcula_PID_translacional(KpTrans, KdTrans, KiTrans, MAXSPEED2);
               controle_motores_translacional();
             }
           }
@@ -924,6 +937,23 @@ void callRobotTask(char status)
     status = '3';
     lastReceivedChar = '3';
   break;
+
+  case '9':
+    static bool firstTimeOnBrushless2 = true;
+    if(firstTimeOnBrushless2 == true)
+    {
+      for(int i=1; i<BRUSHLESSSPEED2; i++)
+      {
+        Brushless.write(i);
+        delay(25);
+      }
+      firstTimeOnBrushless2 = false;
+    }
+    Brushless.write(BRUSHLESSSPEED2);
+    // status = '2';
+    // lastReceivedChar = '2';
+  break;
+
 
   default:
     analogWrite(PWM_LEFT,0);
