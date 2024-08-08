@@ -165,14 +165,14 @@ void calcula_PID(float KpParam, float KdParam)
   erro_anterior = erro_f;
 }
 
-// void calcula_PID_rot(float KpParamRot , float KdParamRot , float KiParamrot){
-//   erro_f_rot = (calculate_rpm_esq() - calculate_rpm_dir());
-//   P_rot = erro_f_rot;
-//   D_rot = erro_f_rot - erro_anterior_rot;
-//   I_rot += erro_f_rot;
-//   PIDrot =(KpParamRot*P_rot)+(KdParamRot*D_rot)+(KiParamRot*I_rot);
-//   erro_anterior_rot = erro_f_rot;
-// }
+void calcula_PID_rot(float KpParamRot , float KdParamRot , float KiParamrot){
+  erro_f_rot = (calculate_rpm_esq() - calculate_rpm_dir());
+  P_rot = erro_f_rot;
+  D_rot = erro_f_rot - erro_anterior_rot;
+  I_rot += erro_f_rot;
+  PIDrot =(KpParamRot*P_rot)+(KdParamRot*D_rot)+(KiParamRot*I_rot);
+  erro_anterior_rot = erro_f_rot;
+}
 
 float curva_acel(float pwm_goal)
 {
@@ -202,18 +202,6 @@ int translacionalErrorIndex = 0; // index to keep track of the current position 
 
 void calcula_PID_translacional(float KpParam_Translacional, float KdParam_Translacional,float KiParam_Translacional, float desiredSpeed)
 {
-  // delta_time = micros() - last_time;
-  // last_time = micros();
-
-  // if (n_pid > 10)
-  // {
-  //   SerialBT.println(delta_time);
-  //   n_pid = 0;
-  // }
-  // else
-  // {
-  //   n_pid++;
-  // }
   translacionalError = curva_acel(desiredSpeed) - robotSpeed;
   P_Translacional = translacionalError;
   D_Translacional = translacionalError - lastTranslacionalError;
@@ -231,75 +219,7 @@ void calcula_PID_translacional(float KpParam_Translacional, float KdParam_Transl
   lastTranslacionalError = translacionalError;
 }
 
-// void controle_motores(float motorPWM)
-// {
-//   velesq = curva_acel(motorPWM) + PID;
-//   veldir = curva_acel(motorPWM) - PID;
-
-//   if(veldir >= 0)
-//   {
-//     if(veldir > MAX_PWM) veldir = MAX_PWM;
-//     analogWrite(in_dir1,LOW);
-//     analogWrite(in_dir2,veldir);
-//   }
-//   else
-//   {
-//     veldir = (-1) * veldir;
-//     analogWrite(in_dir1,veldir);
-//     analogWrite(in_dir2,LOW);
-//   }
-//   //analogWrite(PWM_RIGHT,veldir);
-
-//   if(velesq >= 0)
-//   {
-//     if (velesq > MAX_PWM) velesq = MAX_PWM;
-//     analogWrite(in_esq1,LOW);
-//     analogWrite(in_esq2,velesq);
-//   }
-//   else
-//   {
-//     velesq = (-1) * velesq;
-//     analogWrite(in_esq1,velesq);
-//     analogWrite(in_esq2,LOW);
-//   }
-//   //analogWrite(PWM_LEFT,velesq);
-// }
-
-// void controle_motores_rot(float motorPWM)
-// {
-//   velesqrot = motorPWM + PIDrot;
-//   veldirrot = motorPWM - PIDrot;
-
-//   if(veldirrot >= 0)
-//   {
-//     if(veldirrot > MAX_PWM) veldirrot = MAX_PWM;
-//     digitalWrite(in_dir1,LOW);
-//     digitalWrite(in_dir2,HIGH);
-//   }
-//   else
-//   {
-//     veldirrot = (-1) * veldirrot;
-//     digitalWrite(in_dir1,HIGH);
-//     digitalWrite(in_dir2,LOW);
-//   }
-//   analogWrite(PWM_RIGHT,veldirrot);
-
-//   if(velesqrot >= 0)
-//   {
-//     if (velesqrot > MAX_PWM) velesqrot = MAX_PWM;
-//     digitalWrite(in_esq1,LOW);
-//     digitalWrite(in_esq2,HIGH);
-//   }
-//   else
-//   {
-//     velesqrot = (-1) * velesqrot;
-//     digitalWrite(in_esq1,HIGH);
-//     digitalWrite(in_esq2,LOW);
-//   }
-//   analogWrite(PWM_LEFT,velesqrot);
-// }
-
-void controle_motores_translacional()
+void motorControl()
 {
   velesq = PIDTranslacional + PID;
   veldir = PIDTranslacional - PID;
@@ -331,63 +251,36 @@ void controle_motores_translacional()
   }
 }
 
-// struct MotorControlData {
-//     float encoderValueBegin;
-//     float encoderValueEnd;
-//     int motorPWM;
-// };
-
-// std::vector<MotorControlData> trackMap = {
-//   //{encoderValueBegin, encoderValueEnd, motorPWM},
-//   {0,	3000,	200},
-//   {4000,	6000,	120},
-//   {7300, 16000, 250},
-//   {18800, 22000, 170},
-//   //{25000, 30000, 60},
-//   //{72000, 99999, 0}
-// };
-
-// void motorControlWithMap(int encVal)
-// {
-//   bool not_mapped = true;
-//   for (const auto& MotorControlData : trackMap)
-//   {
-//     float firstEncoderValue = MotorControlData.encoderValueBegin;
-//     float secondEncoderValue = MotorControlData.encoderValueEnd;
-//     int pwmDeliveredToMotors = MotorControlData.motorPWM;
-
-//     if (encVal >= firstEncoderValue && encVal <= secondEncoderValue)
-//     {
-//       if(pwmDeliveredToMotors>=220)
-//       {
-//         calcula_PID(KpR, KdR);
-//         controle_motores(pwmDeliveredToMotors);
-//       }
-
-//       else
-//       { 
-//         calcula_PID(Kp, Kd);
-//         controle_motores(pwmDeliveredToMotors);
-//       }
-//       not_mapped = false;
-//       //return;
-//     }
-//   }
-//   if(not_mapped){
-//     calcula_PID(Kp, Kd);
-//     controle_motores(100);
-//   }
-// }
-
-void controle_com_mapeamento(int encVal)
+void motorControlOnLine()
 {
-  if(encVal<357) {calcula_PID(Kp,Kd); calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 1.5); controle_motores_translacional();} //começo de pista lateral direito até primeira marcaçao
-  else if(encVal >= 20100 && encVal <= 20437) {calcula_PID(KpR,KdR); calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 4); controle_motores_translacional();}
-  else if(encVal >= 23600 && encVal <= 26000) {calcula_PID(KpR,KdR); calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 5); controle_motores_translacional();}
-  else if(encVal >= 26001 && encVal <= 26200) {calcula_PID(KpR,KdR); calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 4); controle_motores_translacional();}
-  else if(encVal >= 26201 && encVal <= 26400) {calcula_PID(KpR,KdR); calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 3); controle_motores_translacional();}
-  
-  else{calcula_PID(Kp,Kd); calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 2); controle_motores_translacional();}
+  velesq = PIDTranslacional + PID + PIDrot;
+  veldir = PIDTranslacional - PID - PIDrot;
+
+  if(veldir >= 0)
+  {
+    if(veldir > MAX_PWM) veldir = MAX_PWM;
+    analogWrite(in_dir1,LOW);
+    analogWrite(in_dir2,veldir);
+  }
+  else
+  {
+    veldir = (-1) * veldir;
+    analogWrite(in_dir1,veldir);
+    analogWrite(in_dir2,LOW);
+  }
+
+  if(velesq >= 0)
+  {
+    if (velesq > MAX_PWM) velesq = MAX_PWM;
+    analogWrite(in_esq1,LOW);
+    analogWrite(in_esq2,velesq);
+  }
+  else
+  {
+    velesq = (-1) * velesq;
+    analogWrite(in_esq1,velesq);
+    analogWrite(in_esq2,LOW);
+  }
 }
 
 void ler_laterais(void *parameter){
@@ -512,19 +405,6 @@ void tratamento()
         }
       }
     }
-
-    // SerialBT.print("Media Encoder Absoluto ");
-    // SerialBT.print("\t");
-
-    // SerialBT.print("Media Encoder Delta ");
-    // SerialBT.print("\t");
-
-    // SerialBT.print("Vcurva ");
-    // SerialBT.print("\t");
-
-    // SerialBT.print("Curva? ");
-    // SerialBT.println("\t");
-
     for(short i = 0; i < mapDataList.size(); i++)
     {
       // SerialBT.print(mapDataList[i].meanEncoderCount);SerialBT.print("\t");
@@ -576,14 +456,7 @@ void tratamento()
         //transforma metros em pulsos de encoder
         mapDataList[i].accelerationSpace = (accelerationSpaceMeter/MM_PER_COUNT)*1000.0f;
         mapDataList[i].desaccelerationSpace = (desaccelerationSpaceMeter/MM_PER_COUNT)*1000.0f;
-      }
-      // SerialBT.print(i);
-      // SerialBT.print(" : ");
-      // SerialBT.print(" espacoDesaceleracao ");
-      // SerialBT.print(desaccelerationSpaceMeter);
-      // SerialBT.print(" ");
-      // SerialBT.println(mapDataList[i].desaccelerationSpace);
-      
+      }    
     }
     if(i==0)
     {
@@ -664,7 +537,7 @@ void callRobotTask(char status)
         ler_sensores();
         calcula_PID(Kp,Kd);
         calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 1.41);
-        controle_motores_translacional();
+        motorControl();
         if(segundaVez == true)
         {
           i = i+2;
@@ -677,7 +550,7 @@ void callRobotTask(char status)
         ler_sensores();
         calcula_PID(Kp,Kd);
         calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 1.3);
-        controle_motores_translacional();
+        motorControl();
         if(segundaVez == true)
         {
           i = i+6;
@@ -695,21 +568,22 @@ void callRobotTask(char status)
               ler_sensores();
               calcula_PID(Kp,Kd);
               calcula_PID_translacional(KpTrans, KdTrans, KiTrans, MAXSPEED);
-              controle_motores_translacional();
+              motorControl();
             }
             else if(quantoAndouAteAgora >= mapDataList[i].desaccelerationCount)
             {
               ler_sensores();
               calcula_PID(Kp,Kd);
               calcula_PID_translacional(KpTrans, KdTrans, KiTrans, mapDataList[i+1].curveSpeed);
-              controle_motores_translacional();
+              calcula_PID_rot(KpRot, KdRot, KiRot)
+              motorControlOnLine();
             }
             else
             {
               ler_sensores();
               calcula_PID(Kp,Kd);
               calcula_PID_translacional(KpTrans, KdTrans, KiTrans, MAXSPEED);
-              controle_motores_translacional();
+              motorControl();
             }
           }
           else //caso não seja uma reta, ou seja curva
@@ -717,7 +591,7 @@ void callRobotTask(char status)
             ler_sensores();
             calcula_PID(Kp,Kd);
             calcula_PID_translacional(KpTrans, KdTrans, KiTrans, (mapDataList[i].curveSpeed-0.25f));
-            controle_motores_translacional();
+            motorControl();
           }
         }
         else //é o ultimo valor da lista
@@ -726,7 +600,7 @@ void callRobotTask(char status)
           ler_sensores();
           calcula_PID(Kp,Kd);
           calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 3.0);
-          controle_motores_translacional();
+          motorControl();
         }
       }
       else //se ele já passou da marcação lateral, então incrementa o i, indo para o próximo intervalo
@@ -961,6 +835,25 @@ void callRobotTask(char status)
     //analogWrite(PROPELLER_PIN, 0);
   break;
   }
+}
+
+long int calculate_rpm_esq(){
+  Serial.print(enc_esq_pul);
+  Serial.print(", ");
+  Serial.println(pul_prev_esq);
+  enc_esq_pul = encoder.getCount() - pul_prev_esq;
+  pul_prev_esq = encoder.getCount();
+
+  return enc_esq_pul;
+}
+
+long int calculate_rpm_dir(){
+  Serial.print(enc_dir_pul);
+  Serial.print(", ");
+  Serial.println(pul_prev_dir);
+  enc_dir_pul =  encoder2.getCount() - pul_prev_dir;
+  pul_prev_dir = encoder2.getCount();
+  return enc_dir_pul;
 }
 
 void setup()

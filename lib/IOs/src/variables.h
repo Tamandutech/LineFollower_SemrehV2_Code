@@ -79,6 +79,10 @@ float KpTrans = 1;
 float KdTrans = 20;
 float KiTrans = 4.6;
 
+float KpRot=180;
+float KdRot=3;
+float KiRot=10;
+
 //Valores para leitura do sensores laterais
 #define DEBOUNCETIME 200
 #define MED_TAMANHO 3
@@ -98,21 +102,18 @@ float erro_f = 0; // Erro dos sensores (-3500 < x < 3500)
 
 
 
-// variáveis globais controle rotacional
-// long int enc_esq_pul = 0;
-// long int enc_dir_pul = 0;
-// long int pul_prev_esq = 0;
-// long int pul_prev_dir = 0;
+variáveis globais controle rotacional
+long int enc_esq_pul = 0;
+long int enc_dir_pul = 0;
+long int pul_prev_esq = 0;
+long int pul_prev_dir = 0;
 
-// float erro_f_rot = 0;
-// float erro_anterior_rot = 0;
-// float P_rot = 0 ;
-// float D_rot = 0;
-// float I_rot = 0;
-// float KpParamRot=180;
-// float PIDrot = 0;
-// float KdParamRot=3;
-// float KiParamRot=10;
+float erro_f_rot = 0;
+float erro_anterior_rot = 0;
+float P_rot = 0 ;
+float D_rot = 0;
+float I_rot = 0;
+float PIDrot = 0;
 
 float MM_PER_COUNT = 0.576f;
 #define SAMPLING_TIME 10
