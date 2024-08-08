@@ -165,13 +165,23 @@ void calcula_PID(float KpParam, float KdParam)
   erro_anterior = erro_f;
 }
 
+float rotacionalErrorBuffer[9]; // buffer to store the last 5 values of translationalError
+int rotacionalErrorIndex = 0; // index to keep track of the current position in the buffer
 void calcula_PID_rot(float KpParamRot , float KdParamRot , float KiParamrot){
-  erro_f_rot = (calculate_rpm_esq() - calculate_rpm_dir());
-  P_rot = erro_f_rot;
-  D_rot = erro_f_rot - erro_anterior_rot;
-  I_rot += erro_f_rot;
+  rotacionalError = (calculate_rpm_esq() - calculate_rpm_dir());
+  P_rot = rotacionalError;
+  D_rot = rotacionalError - lastRotacionalError;
+  
+  // update the buffer and calculate the sum of the last 5 values
+  rotacionalErrorBuffer[rotacionalErrorIndex] = rotacionalError;
+  rotacionalErrorIndex = (rotacionalErrorIndex + 1) % 9;
+  float sum = 0;
+  for (int i = 0; i < 9; i++) {
+    sum += rotacionalErrorBuffer[i];
+  }
+  I_Translacional = sum;
   PIDrot =(KpParamRot*P_rot)+(KdParamRot*D_rot)+(KiParamRot*I_rot);
-  erro_anterior_rot = erro_f_rot;
+  lastRotacionalError = rotacionalError;
 }
 
 float curva_acel(float pwm_goal)
@@ -253,8 +263,8 @@ void motorControl()
 
 void motorControlOnLine()
 {
-  velesq = PIDTranslacional + PID + PIDrot;
-  veldir = PIDTranslacional - PID - PIDrot;
+  velesq = PIDTranslacional + PID - PIDrot;
+  veldir = PIDTranslacional - PID + PIDrot;
 
   if(veldir >= 0)
   {
