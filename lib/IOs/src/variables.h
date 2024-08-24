@@ -54,6 +54,8 @@ float D_Translacional = 0;
 float I_Translacional = 0;
 float PIDTranslacional = 0;
 
+float rotacionalError;
+float lastRotacionalError;
 #define MAX_PWM 255
 
 #define HIGHSPEED_PWM 130
@@ -69,8 +71,8 @@ float PIDTranslacional = 0;
 float Kp = 0.0123; // 0.074  M120 Curva
 float Kd = 0.15; //  0.48   M120 Curva
 
-float KpR = 0.0123; // M255
-float KdR = 0.6; //  M255
+float KpR = 0.05; // M255
+float KdR = 0.15; //  M255
 
 float P = 0, D = 0; // Valores de ganho do PID
 float PID = 0; // Valor do ganho do PID total
@@ -79,8 +81,8 @@ float KpTrans = 1;
 float KdTrans = 20;
 float KiTrans = 4.6;
 
-float KpRot=180;
-float KdRot=3;
+float KpRot=7;
+float KdRot=0;
 float KiRot=10;
 
 //Valores para leitura do sensores laterais
@@ -102,7 +104,7 @@ float erro_f = 0; // Erro dos sensores (-3500 < x < 3500)
 
 
 
-variáveis globais controle rotacional
+//variáveis globais controle rotacional
 long int enc_esq_pul = 0;
 long int enc_dir_pul = 0;
 long int pul_prev_esq = 0;
@@ -125,8 +127,10 @@ float FRICTION = 0.577f;
 //#define desaceleracao 5
 float MASS = 0.172f;
 float BRUSHLESSFORCE = 3.0f;
-float MAXSPEED = 4.0f;
+float MAXSPEED = 5.0f;
 float MAXSPEED2 = 4.5f;
 float acceleration = 15.0f;
 
 #define FORMAT_LITTLEFS_IF_FAILED true
+
+#define ACCELERATION_OFFSET 350

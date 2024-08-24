@@ -41,6 +41,8 @@ public:
       lineSpeed(lineSpeed), curve(curve), accelerationSpace(accelerationSpace), desaccelerationSpace(desaccelerationSpace), accelerationCount(accelerationCount), desaccelerationCount(desaccelerationCount){}
 };
 
+std::vector<Map_Data> mapDataListManual;
+std::vector<Map_Data> mapDataListSensor;
 std::vector<Map_Data> mapDataList;
 
 Servo Brushless;
@@ -167,20 +169,20 @@ void calcula_PID(float KpParam, float KdParam)
 
 float rotacionalErrorBuffer[9]; // buffer to store the last 5 values of translationalError
 int rotacionalErrorIndex = 0; // index to keep track of the current position in the buffer
-void calcula_PID_rot(float KpParamRot , float KdParamRot , float KiParamrot){
+void calcula_PID_rot(float KpParamRot , float KdParamRot , float KiParamRot){
   rotacionalError = (calculate_rpm_esq() - calculate_rpm_dir());
   P_rot = rotacionalError;
   D_rot = rotacionalError - lastRotacionalError;
   
   // update the buffer and calculate the sum of the last 5 values
-  rotacionalErrorBuffer[rotacionalErrorIndex] = rotacionalError;
-  rotacionalErrorIndex = (rotacionalErrorIndex + 1) % 9;
-  float sum = 0;
-  for (int i = 0; i < 9; i++) {
-    sum += rotacionalErrorBuffer[i];
-  }
-  I_Translacional = sum;
-  PIDrot =(KpParamRot*P_rot)+(KdParamRot*D_rot)+(KiParamRot*I_rot);
+  // rotacionalErrorBuffer[rotacionalErrorIndex] = rotacionalError;
+  // rotacionalErrorIndex = (rotacionalErrorIndex + 1) % 9;
+  // float sum = 0;
+  // for (int i = 0; i < 9; i++) {
+  //   sum += rotacionalErrorBuffer[i];
+  // }
+  // I_Translacional = sum;
+  PIDrot =(KpParamRot*P_rot)+(KdParamRot*D_rot);
   lastRotacionalError = rotacionalError;
 }
 
@@ -193,7 +195,7 @@ float curva_acel(float pwm_goal)
   }
   else if (pwm_goal < last_pwm)
   {
-    last_pwm -= 0.04f;
+    last_pwm -= 0.02f;
     run_pwm = pwm_goal;
   }
   else
@@ -263,8 +265,8 @@ void motorControl()
 
 void motorControlOnLine()
 {
-  velesq = PIDTranslacional + PID - PIDrot;
-  veldir = PIDTranslacional - PID + PIDrot;
+  velesq = PIDTranslacional  + PIDrot;
+  veldir = PIDTranslacional  - PIDrot;
 
   if(veldir >= 0)
   {
@@ -328,6 +330,8 @@ void ler_laterais(void *parameter){
         led_stip.setPixelColor(1, 0, 0, 0);
         led_stip.show();
         readingWhiteLeft = true;
+        mapDataListSensor.push_back(Map_Data(encoder.getCount(), encoder2.getCount(), (encoder.getCount()+encoder2.getCount())/2));
+
       }
 
       else if(medLateralEsq > 3000 && medLateralDir < 2900 && readingWhiteRight == false && firstTimeRight == false) //lê apenas marcação direita
@@ -337,7 +341,6 @@ void ler_laterais(void *parameter){
         encoder.clearCount();
         firstTimeRight = true;
         readingWhiteRight = true;
-        //mapDataList.push_back(Map_Data(encoder.getCount(), encoder2.getCount(), (encoder.getCount()+encoder2.getCount())/2));
       }
     }
 
@@ -497,6 +500,24 @@ void tratamento()
   }
 }
 
+void hybridMapping(const std::vector<Map_Data>& manualData, const std::vector<Map_Data>& sensorData, std::vector<Map_Data>& resultData) {
+  float thresholdSort = 2000;
+  resultData.resize(manualData.size());
+  for (std::size_t i = 0; i < manualData.size(); ++i) {
+    bool found = false;
+    for (std::size_t j = 0; j < sensorData.size(); ++j) {
+      if (std::abs (manualData[i].meanEncoderCount - sensorData[j].meanEncoderCount) <= thresholdSort){
+        resultData[i] = sensorData[j];
+        found = true;
+        break;
+      }
+    }
+    if(!found){
+      resultData[i] = manualData[i];
+    }
+  }
+}
+
 char lastReceivedChar = '3'; // = Abort
 
 void bluetoothRead()
@@ -520,7 +541,7 @@ void callRobotTask(char status)
     ler_sensores();
     calcula_PID(Kp,Kd);
     calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 0.5);
-    controle_motores_translacional();
+    motorControl();
   break;
 
   case '2': //Run with track map
@@ -528,46 +549,7 @@ void callRobotTask(char status)
     if(i < mapDataList.size())
     {
       float quantoAndouAteAgora = (encoder.getCount() + encoder2.getCount())/2; //calcula o quanto já andou até o momento
-      if (quantoAndouAteAgora > 4729.0 && quantoAndouAteAgora < 5403.0)
-      {
-        static bool primeiraVez = true;
-        ler_sensores();
-        calcula_PID(Kp,Kd);
-        calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 1.5);
-        controle_motores_translacional();
-        if(primeiraVez == true)
-        {
-          i++;
-          primeiraVez = false;
-        }
-      }
-      else if (quantoAndouAteAgora > 26240.5 && quantoAndouAteAgora < 27265.5)
-      {
-        static bool segundaVez = true;
-        ler_sensores();
-        calcula_PID(Kp,Kd);
-        calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 1.41);
-        motorControl();
-        if(segundaVez == true)
-        {
-          i = i+2;
-          segundaVez = false;
-        }
-      }
-      else if (quantoAndouAteAgora > 39576.5 && quantoAndouAteAgora < 42665.5)
-      {
-        static bool segundaVez = true;
-        ler_sensores();
-        calcula_PID(Kp,Kd);
-        calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 1.3);
-        motorControl();
-        if(segundaVez == true)
-        {
-          i = i+6;
-          segundaVez = false;
-        }
-      }
-      else if(quantoAndouAteAgora <= mapDataList[i].meanEncoderCount) //se o valor de encoder da marcação for maior do que o quanto andou até o momento
+      if(quantoAndouAteAgora <= mapDataList[i].meanEncoderCount) //se o valor de encoder da marcação for maior do que o quanto andou até o momento
       {
         if(i != mapDataList.size()-1)
         {
@@ -577,31 +559,38 @@ void callRobotTask(char status)
             {
               ler_sensores();
               calcula_PID(Kp,Kd);
-              calcula_PID_translacional(KpTrans, KdTrans, KiTrans, MAXSPEED);
+              calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 2);
               motorControl();
+              led_stip.setPixelColor(0,G);
+              led_stip.show();
             }
             else if(quantoAndouAteAgora >= mapDataList[i].desaccelerationCount)
             {
               ler_sensores();
               calcula_PID(Kp,Kd);
-              calcula_PID_translacional(KpTrans, KdTrans, KiTrans, mapDataList[i+1].curveSpeed);
-              calcula_PID_rot(KpRot, KdRot, KiRot)
-              motorControlOnLine();
+              calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 1/*mapDataList[i+1].curveSpeed*/);
+              motorControl();
+              led_stip.setPixelColor(0,R);
+              led_stip.show();
             }
             else
             {
               ler_sensores();
               calcula_PID(Kp,Kd);
-              calcula_PID_translacional(KpTrans, KdTrans, KiTrans, MAXSPEED);
+              calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 2);
               motorControl();
+              led_stip.setPixelColor(0,B);
+              led_stip.show();
             }
           }
           else //caso não seja uma reta, ou seja curva
           {
             ler_sensores();
             calcula_PID(Kp,Kd);
-            calcula_PID_translacional(KpTrans, KdTrans, KiTrans, (mapDataList[i].curveSpeed-0.25f));
+            calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 1/*mapDataList[i].curveSpeed*/);
             motorControl();
+            led_stip.setPixelColor(0,255,255,255);
+            led_stip.show();
           }
         }
         else //é o ultimo valor da lista
@@ -609,7 +598,7 @@ void callRobotTask(char status)
           //controla o robô na pista com a velocidade para fazer a curva
           ler_sensores();
           calcula_PID(Kp,Kd);
-          calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 3.0);
+          calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 1.5);
           motorControl();
         }
       }
@@ -641,108 +630,12 @@ void callRobotTask(char status)
   break;
 
   case '4': //Safe
-    static short i2 = 0;
-    if(i < mapDataList.size())
-    {
-      float quantoAndouAteAgora = (encoder.getCount() + encoder2.getCount())/2; //calcula o quanto já andou até o momento
-      if (quantoAndouAteAgora > 4729.0 && quantoAndouAteAgora < 5403.0)
-      {
-        static bool primeiraVez = true;
-        ler_sensores();
-        calcula_PID(Kp,Kd);
-        calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 1.5);
-        controle_motores_translacional();
-        if(primeiraVez == true)
-        {
-          i2++;
-          primeiraVez = false;
-        }
-      }
-      else if (quantoAndouAteAgora > 26240.5 && quantoAndouAteAgora < 27265.5)
-      {
-        static bool segundaVez = true;
-        ler_sensores();
-        calcula_PID(Kp,Kd);
-        calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 1.41);
-        controle_motores_translacional();
-        if(segundaVez == true)
-        {
-          i2 = i2+2;
-          segundaVez = false;
-        }
-      }
-      else if (quantoAndouAteAgora > 39576.5 && quantoAndouAteAgora < 42665.5)
-      {
-        static bool segundaVez = true;
-        ler_sensores();
-        calcula_PID(Kp,Kd);
-        calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 1.3);
-        controle_motores_translacional();
-        if(segundaVez == true)
-        {
-          i2 = i2+6;
-          segundaVez = false;
-        }
-      }
-      else if(quantoAndouAteAgora <= mapDataList[i2].meanEncoderCount) //se o valor de encoder da marcação for maior do que o quanto andou até o momento
-      {
-        if(i2 != mapDataList.size()-1)
-        {
-          if(mapDataList[i].curve == 0) //entra no if se for uma reta
-          {
-            if(quantoAndouAteAgora < mapDataList[i2].accelerationCount)
-            {
-              ler_sensores();
-              calcula_PID(Kp,Kd);
-              calcula_PID_translacional(KpTrans, KdTrans, KiTrans, MAXSPEED2);
-              controle_motores_translacional();
-            }
-            else if(quantoAndouAteAgora >= mapDataList[i2].desaccelerationCount)
-            {
-              ler_sensores();
-              calcula_PID(Kp,Kd);
-              calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 1.3);
-              controle_motores_translacional();
-            }
-            else
-            {
-              ler_sensores();
-              calcula_PID(Kp,Kd);
-              calcula_PID_translacional(KpTrans, KdTrans, KiTrans, MAXSPEED2);
-              controle_motores_translacional();
-            }
-          }
-          else //caso não seja uma reta, ou seja curva
-          {
-            ler_sensores();
-            calcula_PID(Kp,Kd);
-            calcula_PID_translacional(KpTrans, KdTrans, KiTrans, (mapDataList[i2].curveSpeed));
-            controle_motores_translacional();
-          }
-        }
-        else //é o ultimo valor da lista
-        {
-          //controla o robô na pista com a velocidade para fazer a curva
-          ler_sensores();
-          calcula_PID(Kp,Kd);
-          calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 3.0);
-          controle_motores_translacional();
-        }
-      }
-      else //se ele já passou da marcação lateral, então incrementa o i, indo para o próximo intervalo
-      {
-        i2++;
-      }
-    }
-    else //se acabou a lista para os motores
-    {
-      analogWrite(in_dir1,255);
-      analogWrite(in_dir2,255);
-
-      analogWrite(in_esq1,255);
-      analogWrite(in_esq2,255);
-      Brushless.write(0);
-    }
+    ler_sensores();
+    calcula_PID(KpR,KdR);
+    calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 4);
+    calcula_PID_rot(KpRot,KdRot, KiRot);
+    motorControlOnLine();
+    //motorControl();
   break;
 
   case '5': //adiciona marcação
@@ -752,7 +645,7 @@ void callRobotTask(char status)
     // SerialBT.print(encoder2.getCount());
     status = '1';
     lastReceivedChar = '1';
-    SerialBT.println(robotSpeed);
+    //SerialBT.println(robotSpeed);
 
     mapDataList.push_back(Map_Data(encoder.getCount(), encoder2.getCount(), (encoder.getCount()+encoder2.getCount())/2));
   break;
@@ -793,6 +686,10 @@ void callRobotTask(char status)
     {
       for(int i = 0; i < mapDataList.size(); i++)
       {
+        if(mapDataList[i].curve == 1)
+        {
+          mapDataList[i].meanEncoderCount = mapDataList[i].meanEncoderCount + ACCELERATION_OFFSET;
+        }
         if (i == 0)
         {
           string meanEncoderCount = to_string(mapDataList[i].meanEncoderCount);
@@ -802,7 +699,7 @@ void callRobotTask(char status)
           string desaccelerationCount = to_string(mapDataList[i].desaccelerationCount);
 
           string dataString = meanEncoderCount + "," + curve + "," + curveSpeed + "," + accelerationCount + "," + desaccelerationCount + "\n";
-          writeFile(LittleFS, "/Map_Data2.txt", dataString.c_str());
+          writeFile(LittleFS, "/Map_Data.txt", dataString.c_str());
         }
         else
         {
@@ -813,7 +710,7 @@ void callRobotTask(char status)
           string desaccelerationCount = to_string(mapDataList[i].desaccelerationCount);
 
           string dataString = meanEncoderCount + "," + curve + "," + curveSpeed + "," + accelerationCount + "," + desaccelerationCount + "\n";
-          appendFile(LittleFS, "/Map_Data2.txt", dataString.c_str());
+          appendFile(LittleFS, "/Map_Data.txt", dataString.c_str());
         }
       }
       firstTimeProcess = false;
@@ -822,27 +719,15 @@ void callRobotTask(char status)
     lastReceivedChar = '3';
   break;
 
-  case '9':
-    static bool firstTimeOnBrushless2 = true;
-    if(firstTimeOnBrushless2 == true)
-    {
-      for(int i=1; i<BRUSHLESSSPEED2; i++)
-      {
-        Brushless.write(i);
-        delay(25);
-      }
-      firstTimeOnBrushless2 = false;
-    }
-    Brushless.write(BRUSHLESSSPEED2);
-    // status = '2';
-    // lastReceivedChar = '2';
-  break;
-
-
   default:
-    analogWrite(PWM_LEFT,0);
-    analogWrite(PWM_RIGHT,0);
-    //analogWrite(PROPELLER_PIN, 0);
+    analogWrite(in_dir1,255);
+    analogWrite(in_dir2,255);
+
+    analogWrite(in_esq1,255);
+    analogWrite(in_esq2,255);
+
+    // analogWrite(PROPELLER_PIN, 0);
+    Brushless.write(0);
   break;
   }
 }
