@@ -102,7 +102,7 @@ float erro_f = 0; // Erro dos sensores (-3500 < x < 3500)
 
 
 
-variáveis globais controle rotacional
+//variáveis globais controle rotacional
 long int enc_esq_pul = 0;
 long int enc_dir_pul = 0;
 long int pul_prev_esq = 0;

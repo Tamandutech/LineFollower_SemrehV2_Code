@@ -41,6 +41,8 @@ public:
       lineSpeed(lineSpeed), curve(curve), accelerationSpace(accelerationSpace), desaccelerationSpace(desaccelerationSpace), accelerationCount(accelerationCount), desaccelerationCount(desaccelerationCount){}
 };
 
+std::vector<Map_Data> mapDataListManual;
+std::vector<Map_Data> mapDataListSensor;
 std::vector<Map_Data> mapDataList;
 
 Servo Brushless;
@@ -167,8 +169,10 @@ void calcula_PID(float KpParam, float KdParam)
 
 float rotacionalErrorBuffer[9]; // buffer to store the last 5 values of translationalError
 int rotacionalErrorIndex = 0; // index to keep track of the current position in the buffer
+
+
 void calcula_PID_rot(float KpParamRot , float KdParamRot , float KiParamrot){
-  rotacionalError = (calculate_rpm_esq() - calculate_rpm_dir());
+  long rotacionalError = (calculate_rpm_esq() - calculate_rpm_dir());
   P_rot = rotacionalError;
   D_rot = rotacionalError - lastRotacionalError;
   
@@ -180,7 +184,7 @@ void calcula_PID_rot(float KpParamRot , float KdParamRot , float KiParamrot){
     sum += rotacionalErrorBuffer[i];
   }
   I_Translacional = sum;
-  PIDrot =(KpParamRot*P_rot)+(KdParamRot*D_rot)+(KiParamRot*I_rot);
+  PIDrot =(KpParamRot*P_rot)+(KdParamRot*D_rot)+(KiParamrot*I_rot);
   lastRotacionalError = rotacionalError;
 }
 
@@ -311,6 +315,9 @@ void ler_laterais(void *parameter){
 
     medLateralDir = medLateralDir / MED_TAMANHO;
     medLateralEsq = medLateralEsq / MED_TAMANHO;
+
+
+//Modificação feita pelo Vitor para tratar o caso do mapeamento misto (sensor lateral e manualmente)
     
     if(medLateralEsq < 3000 || medLateralDir < 3000) //lê marcação esquerdo ou direito esq3100 dir3700
     {
@@ -328,6 +335,7 @@ void ler_laterais(void *parameter){
         led_stip.setPixelColor(1, 0, 0, 0);
         led_stip.show();
         readingWhiteLeft = true;
+        mapDataListSensor.push_back(Map_Data(encoder.getCount(), encoder2.getCount(), (encoder.getCount()+encoder2.getCount())/2));     // Aqui adicionamos os Map_Data com base na leitura do sensor esquerdo
       }
 
       else if(medLateralEsq > 3000 && medLateralDir < 2900 && readingWhiteRight == false && firstTimeRight == false) //lê apenas marcação direita
@@ -367,6 +375,13 @@ void calculateRobotSpeed(void *parameter) //m/s
     robotSpeed = ((leftDistanceTravelled + rightDistanceTravelled)/2)* MM_PER_COUNT / SAMPLING_TIME; //m/s
   }
 }
+
+
+
+
+
+
+
 
 void tratamento()
 {
@@ -512,6 +527,25 @@ void bluetoothRead()
   }
 }
 
+void hybridMapping(const std::vector<Map_Data>& manualData, const std::vector<Map_Data>& sensorData, std::vector<Map_Data>& resultData) {
+  float thresholdSort = 2000;
+  resultData.resize(manualData.size());
+  for (std::size_t i = 0; i < manualData.size(); ++i) {
+    bool found = false;
+    for (std::size_t j = 0; j < sensorData.size(); ++j) {
+      if (std::abs (manualData[i].meanEncoderCount - sensorData[j].meanEncoderCount) <= thresholdSort){
+        resultData[i] = sensorData[j];
+        found = true;
+        break;
+      }
+    }
+    if(!found){
+      resultData[i] = manualData[i];
+    }
+  }
+}
+
+
 void callRobotTask(char status)
 {
   switch(status)
@@ -585,7 +619,7 @@ void callRobotTask(char status)
               ler_sensores();
               calcula_PID(Kp,Kd);
               calcula_PID_translacional(KpTrans, KdTrans, KiTrans, mapDataList[i+1].curveSpeed);
-              calcula_PID_rot(KpRot, KdRot, KiRot)
+              calcula_PID_rot(KpRot, KdRot, KiRot);
               motorControlOnLine();
             }
             else
@@ -754,7 +788,7 @@ void callRobotTask(char status)
     lastReceivedChar = '1';
     SerialBT.println(robotSpeed);
 
-    mapDataList.push_back(Map_Data(encoder.getCount(), encoder2.getCount(), (encoder.getCount()+encoder2.getCount())/2));
+    mapDataListManual.push_back(Map_Data(encoder.getCount(), encoder2.getCount(), (encoder.getCount()+encoder2.getCount())/2));
   break;
 
   case '6': //Put the Map_Data from flash memory to RAM
