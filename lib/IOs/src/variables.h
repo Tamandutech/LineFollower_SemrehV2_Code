@@ -127,7 +127,7 @@ float FRICTION = 0.577f;
 //#define desaceleracao 5
 float MASS = 0.172f;
 float BRUSHLESSFORCE = 3.0f;
-float MAXSPEED = 5.0f;
+float MAXSPEED = 4.0f;
 float MAXSPEED2 = 4.5f;
 float acceleration = 15.0f;
 

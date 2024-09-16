@@ -330,7 +330,7 @@ void ler_laterais(void *parameter){
         led_stip.setPixelColor(1, 0, 0, 0);
         led_stip.show();
         readingWhiteLeft = true;
-        mapDataListSensor.push_back(Map_Data(encoder.getCount(), encoder2.getCount(), (encoder.getCount()+encoder2.getCount())/2));
+        //mapDataListSensor.push_back(Map_Data(encoder.getCount(), encoder2.getCount(), (encoder.getCount()+encoder2.getCount())/2));
 
       }
 
@@ -423,7 +423,7 @@ void tratamento()
       // SerialBT.print(mapDataList[i].meanEncoderCount);SerialBT.print("\t");
       // SerialBT.print(mapDataList[i].meanEncoderDelta);SerialBT.print("\t");
       // SerialBT.print(mapDataList[i].curveSpeed);SerialBT.print("\t");
-      SerialBT.println(mapDataList[i].curve);
+      //SerialBT.println(mapDataList[i].curve);
     }
   }
   else
@@ -540,7 +540,7 @@ void callRobotTask(char status)
   case '1': //Map
     ler_sensores();
     calcula_PID(Kp,Kd);
-    calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 0.5);
+    calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 0.75);
     motorControl();
   break;
 
@@ -549,7 +549,52 @@ void callRobotTask(char status)
     if(i < mapDataList.size())
     {
       float quantoAndouAteAgora = (encoder.getCount() + encoder2.getCount())/2; //calcula o quanto já andou até o momento
-      if(quantoAndouAteAgora <= mapDataList[i].meanEncoderCount) //se o valor de encoder da marcação for maior do que o quanto andou até o momento
+      if(quantoAndouAteAgora>0 && quantoAndouAteAgora<837)
+      {
+        static bool primeiraVez = true;
+        ler_sensores();
+        calcula_PID(Kp,Kd);
+        calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 1.5);
+        motorControl();
+        led_stip.setPixelColor(0,255,0,255);
+        led_stip.show();
+        if(primeiraVez == true)
+        {
+          i = i+2;
+          primeiraVez = false;
+        }
+      }
+      else if(quantoAndouAteAgora>4041 && quantoAndouAteAgora<6193)
+      {
+        static bool primeiraVez = true;
+        ler_sensores();
+        calcula_PID(Kp,Kd);
+        calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 1.5);
+        motorControl();
+        led_stip.setPixelColor(0,255,0,255);
+        led_stip.show();
+        if(primeiraVez == true)
+        {
+          i = i+3;
+          primeiraVez = false;
+        }
+      }
+      else if(quantoAndouAteAgora>15820 && quantoAndouAteAgora<19426)
+      {
+        static bool primeiraVez = true;
+        ler_sensores();
+        calcula_PID(Kp,Kd);
+        calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 1.5);
+        motorControl();
+        led_stip.setPixelColor(0,255,0,255);
+        led_stip.show();
+        if(primeiraVez == true)
+        {
+          i = i+3;
+          primeiraVez = false;
+        }
+      }
+      else if(quantoAndouAteAgora <= mapDataList[i].meanEncoderCount) //se o valor de encoder da marcação for maior do que o quanto andou até o momento
       {
         if(i != mapDataList.size()-1)
         {
@@ -559,7 +604,7 @@ void callRobotTask(char status)
             {
               ler_sensores();
               calcula_PID(Kp,Kd);
-              calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 2);
+              calcula_PID_translacional(KpTrans, KdTrans, KiTrans, MAXSPEED);
               motorControl();
               led_stip.setPixelColor(0,G);
               led_stip.show();
@@ -568,7 +613,7 @@ void callRobotTask(char status)
             {
               ler_sensores();
               calcula_PID(Kp,Kd);
-              calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 1/*mapDataList[i+1].curveSpeed*/);
+              calcula_PID_translacional(KpTrans, KdTrans, KiTrans, (mapDataList[i+1].curveSpeed));
               motorControl();
               led_stip.setPixelColor(0,R);
               led_stip.show();
@@ -577,7 +622,7 @@ void callRobotTask(char status)
             {
               ler_sensores();
               calcula_PID(Kp,Kd);
-              calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 2);
+              calcula_PID_translacional(KpTrans, KdTrans, KiTrans, MAXSPEED);
               motorControl();
               led_stip.setPixelColor(0,B);
               led_stip.show();
@@ -587,7 +632,7 @@ void callRobotTask(char status)
           {
             ler_sensores();
             calcula_PID(Kp,Kd);
-            calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 1/*mapDataList[i].curveSpeed*/);
+            calcula_PID_translacional(KpTrans, KdTrans, KiTrans,(mapDataList[i].curveSpeed)-0.5);
             motorControl();
             led_stip.setPixelColor(0,255,255,255);
             led_stip.show();
@@ -646,6 +691,10 @@ void callRobotTask(char status)
     status = '1';
     lastReceivedChar = '1';
     //SerialBT.println(robotSpeed);
+
+    // SerialBT.print(encoder.getCount());
+    // SerialBT.print(" || ");
+    // SerialBT.println(encoder2.getCount());
 
     mapDataList.push_back(Map_Data(encoder.getCount(), encoder2.getCount(), (encoder.getCount()+encoder2.getCount())/2));
   break;
@@ -828,8 +877,8 @@ void loop()
   bluetoothRead();
 
   callRobotTask(lastReceivedChar);
-  // SerialBT.print(encoder.getCount());
-  // SerialBT.print(" || ");
-  // SerialBT.println(encoder2.getCount());
+  /* SerialBT.print(encoder.getCount());
+  SerialBT.print(" || ");
+  SerialBT.println(encoder2.getCount()); */
   // SerialBT.println(robotSpeed);
 }
