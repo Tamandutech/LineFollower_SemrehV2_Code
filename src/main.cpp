@@ -9,9 +9,12 @@
 #include <cmath>
 #include <vector>
 #include <iostream>
-#include "FS.h"
-#include <LittleFS.h>
+// #include "FS.h"
+// #include <LittleFS.h>
 #include <string>
+#include <iostream>
+#include <fstream>
+#include "SPIFFS.h"
 
 
 using namespace std;
@@ -62,8 +65,8 @@ bool FirstTimeOnSwitchCase = true;
 long int calculate_rpm_esq();
 long int calculate_rpm_dir();
 
-void writeFile(fs::FS &fs, const char * path, const char * message){
-  File file = fs.open(path, FILE_WRITE);
+void writeFile(const char * path, const char * message){
+  File file = SPIFFS.open(path, FILE_WRITE);
   if(!file){
     SerialBT.println("- failed to open file for writing");
     return;
@@ -76,8 +79,8 @@ void writeFile(fs::FS &fs, const char * path, const char * message){
   file.close();
 }
 
-void appendFile(fs::FS &fs, const char * path, const char * message){
-  File file = fs.open(path, FILE_APPEND);
+void appendFile(const char * path, const char * message){
+  File file = SPIFFS.open(path, FILE_APPEND);
   if(!file){
     SerialBT.println("- failed to open file for appending");
     return;
@@ -98,9 +101,9 @@ void deleteFile(fs::FS &fs, const char * path){
     }
 }
 
-void readFile(fs::FS &fs, const char * path){
-  File file = fs.open(path);
-  if(!file || file.isDirectory()){
+void readFile(const char * path){
+  File file = SPIFFS.open(path);
+  if(!file){
     SerialBT.println("- failed to open file for reading");
     return;
   }
@@ -132,14 +135,15 @@ void readFile(fs::FS &fs, const char * path){
       int curve = atoi(stringCurve.c_str());
 
       SerialBT.print(lmeanEncoderCount);
-      SerialBT.print(" ");
+      SerialBT.print(",");
+      SerialBT.print(curve);
+      SerialBT.print(",");
       SerialBT.print(lcurveSpeed);
-      SerialBT.print(" ");
+      SerialBT.print(",");
       SerialBT.print(laccelerationCount);
-      SerialBT.print(" ");
-      SerialBT.print(ldesaccelerationCount);
-      SerialBT.print(" ");
-      SerialBT.println(curve);
+      SerialBT.print(",");
+      SerialBT.println(ldesaccelerationCount);
+      
       
       mapDataList.push_back(Map_Data(0.0f, 0.0f, lmeanEncoderCount, 0.0f,0.0f,0.0f,lcurveSpeed,0.0f,curve,0.0f,0.0f,laccelerationCount,ldesaccelerationCount));
     }
@@ -149,7 +153,56 @@ void readFile(fs::FS &fs, const char * path){
   // {
   //   SerialBT.println(mapDataList[i].meanEncoderCount);
   // }
+  // SerialBT.println(path);
+  // String filePath = ".";
+  //File outputFile = SD.open(filePath, FILE_WRITE);
+
+  
   file.close();
+}
+
+// void escreverArquivo(const char * filename){
+//   String filePath = "TestMap.txt" ;
+//   File inputFile = SD.open(filePath,FILE_READ );
+//   File file = LittleFS.open(filename, "w");
+
+//   while(inputFile.available()){
+//     file.write(inputFile.read());
+//     SerialBT.write(inputFile.read());
+//   }
+  
+//   file.close();
+//   inputFile.close();
+
+// }
+
+void escreverArquivo(fs::FS &fs,const char* outputfile) {
+  // Usar std::ifstream para abrir o arquivo no Windows
+  const char* filePath = "C:\\Users\\henri\\OneDrive\\Documentos\\VSCode\\LineFollower_SemrehV2_Code\\TestMap.txt"; // Coloque o caminho completo do arquivo no Windows
+
+  File file = fs.open(outputfile);
+  if(!file || file.isDirectory()){
+    SerialBT.println("- failed to create OutputFIle");
+    return;
+  }
+
+  std::ifstream inputFile(filePath, std::ios::binary); // Abrir arquivo em modo binário para leitura
+
+
+  if (!inputFile) {
+    SerialBT.println("failed to open inputFile");
+    return;
+  }
+
+  // Copiar dados do arquivo de entrada para o arquivo de saída
+  char buffer;
+  while (inputFile.get(buffer)) {
+    file.write(buffer);
+    SerialBT.println(buffer);
+  }
+
+  file.close();
+  inputFile.close();
 }
 
 void ler_sensores()
@@ -318,27 +371,27 @@ void ler_laterais(void *parameter){
     {
       if(medLateralEsq < 2000 && medLateralDir > 3500 && readingWhiteLeft == false) //lê apenas marcação esquerda
       {
-        SerialBT.print(';'); 
-        SerialBT.print(encoder.getCount()); 
-        SerialBT.print(';'); 
-        SerialBT.print(encoder2.getCount()); 
-        SerialBT.print(';'); 
-        SerialBT.println((encoder.getCount() + encoder2.getCount())/2);
+        // SerialBT.print(';'); 
+        // SerialBT.print(encoder.getCount()); 
+        // SerialBT.print(';'); 
+        // SerialBT.print(encoder2.getCount()); 
+        // SerialBT.print(';'); 
+        // SerialBT.println((encoder.getCount() + encoder2.getCount())/2);
         led_stip.setPixelColor(1, 0, 0, 255);
         led_stip.show();
-        vTaskDelay(pdMS_TO_TICKS(5));  // Manter o buzzer ligado por 100ms
+        vTaskDelay(pdMS_TO_TICKS(20));  // Manter o buzzer ligado por 100ms
         led_stip.setPixelColor(1, 0, 0, 0);
         led_stip.show();
         readingWhiteLeft = true;
-        //mapDataListSensor.push_back(Map_Data(encoder.getCount(), encoder2.getCount(), (encoder.getCount()+encoder2.getCount())/2));
+        mapDataList.push_back(Map_Data(encoder.getCount(), encoder2.getCount(), (encoder.getCount()+encoder2.getCount())/2));
 
       }
 
       else if(medLateralEsq > 3000 && medLateralDir < 2900 && readingWhiteRight == false && firstTimeRight == false) //lê apenas marcação direita
       {
         SerialBT.println("INICIO/FIM");
-        encoder2.clearCount();
-        encoder.clearCount();
+        // encoder2.clearCount();
+        // encoder.clearCount();
         firstTimeRight = true;
         readingWhiteRight = true;
       }
@@ -549,52 +602,7 @@ void callRobotTask(char status)
     if(i < mapDataList.size())
     {
       float quantoAndouAteAgora = (encoder.getCount() + encoder2.getCount())/2; //calcula o quanto já andou até o momento
-      if(quantoAndouAteAgora>0 && quantoAndouAteAgora<837)
-      {
-        static bool primeiraVez = true;
-        ler_sensores();
-        calcula_PID(Kp,Kd);
-        calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 1.5);
-        motorControl();
-        led_stip.setPixelColor(0,255,0,255);
-        led_stip.show();
-        if(primeiraVez == true)
-        {
-          i = i+2;
-          primeiraVez = false;
-        }
-      }
-      else if(quantoAndouAteAgora>4041 && quantoAndouAteAgora<6193)
-      {
-        static bool primeiraVez = true;
-        ler_sensores();
-        calcula_PID(Kp,Kd);
-        calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 1.5);
-        motorControl();
-        led_stip.setPixelColor(0,255,0,255);
-        led_stip.show();
-        if(primeiraVez == true)
-        {
-          i = i+3;
-          primeiraVez = false;
-        }
-      }
-      else if(quantoAndouAteAgora>15820 && quantoAndouAteAgora<19426)
-      {
-        static bool primeiraVez = true;
-        ler_sensores();
-        calcula_PID(Kp,Kd);
-        calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 1.5);
-        motorControl();
-        led_stip.setPixelColor(0,255,0,255);
-        led_stip.show();
-        if(primeiraVez == true)
-        {
-          i = i+3;
-          primeiraVez = false;
-        }
-      }
-      else if(quantoAndouAteAgora <= mapDataList[i].meanEncoderCount) //se o valor de encoder da marcação for maior do que o quanto andou até o momento
+      if(quantoAndouAteAgora <= mapDataList[i].meanEncoderCount) //se o valor de encoder da marcação for maior do que o quanto andou até o momento
       {
         if(i != mapDataList.size()-1)
         {
@@ -632,7 +640,7 @@ void callRobotTask(char status)
           {
             ler_sensores();
             calcula_PID(Kp,Kd);
-            calcula_PID_translacional(KpTrans, KdTrans, KiTrans,(mapDataList[i].curveSpeed)-0.5);
+            calcula_PID_translacional(KpTrans, KdTrans, KiTrans,(mapDataList[i].curveSpeed));
             motorControl();
             led_stip.setPixelColor(0,255,255,255);
             led_stip.show();
@@ -643,7 +651,7 @@ void callRobotTask(char status)
           //controla o robô na pista com a velocidade para fazer a curva
           ler_sensores();
           calcula_PID(Kp,Kd);
-          calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 1.5);
+          calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 3.5);
           motorControl();
         }
       }
@@ -664,23 +672,39 @@ void callRobotTask(char status)
   break;
 
   case '3': //Abort
+    // static bool firstTimeOn3 = true;
+    // if(firstTimeOn3 == true)
+    // {
+    //   pinMode(in_esq1, OUTPUT);
+    //   pinMode(in_esq2, OUTPUT);
+    //   pinMode(in_dir1, OUTPUT);
+    //   pinMode(in_dir2, OUTPUT);
+
+    //   analogWrite(in_dir1,255);
+    //   analogWrite(in_dir2,255);
+
+    //   analogWrite(in_esq1,255);
+    //   analogWrite(in_esq2,255);
+
+    //   firstTimeOn3 = false;
+    // }
+
     analogWrite(in_dir1,255);
     analogWrite(in_dir2,255);
 
     analogWrite(in_esq1,255);
     analogWrite(in_esq2,255);
 
-    // analogWrite(PROPELLER_PIN, 0);
     Brushless.write(0);
   break;
 
   case '4': //Safe
-    ler_sensores();
-    calcula_PID(KpR,KdR);
-    calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 4);
-    calcula_PID_rot(KpRot,KdRot, KiRot);
-    motorControlOnLine();
-    //motorControl();
+  static bool firstTimeOnFlashToRAM4 = true;
+  if(firstTimeOnFlashToRAM4 == true)
+  {
+    readFile("/SafeSabado.txt");
+    firstTimeOnFlashToRAM4 = false;
+  }
   break;
 
   case '5': //adiciona marcação
@@ -703,11 +727,9 @@ void callRobotTask(char status)
   static bool firstTimeOnFlashToRAM = true;
   if(firstTimeOnFlashToRAM == true)
   {
-    readFile(LittleFS, "/Map_Data.txt");
+    readFile("/Map_Data.txt");
     firstTimeOnFlashToRAM = false;
   }
-  // status = '2';
-  // lastReceivedChar = '2';
   break;
 
   case '7':
@@ -722,8 +744,6 @@ void callRobotTask(char status)
       firstTimeOnBrushless = false;
     }
     Brushless.write(BRUSHLESSSPEED);
-    // status = '2';
-    // lastReceivedChar = '2';
   break;
 
   case '8': //Tratamento
@@ -748,7 +768,7 @@ void callRobotTask(char status)
           string desaccelerationCount = to_string(mapDataList[i].desaccelerationCount);
 
           string dataString = meanEncoderCount + "," + curve + "," + curveSpeed + "," + accelerationCount + "," + desaccelerationCount + "\n";
-          writeFile(LittleFS, "/Map_Data.txt", dataString.c_str());
+          writeFile("/Map_Data.txt", dataString.c_str());
         }
         else
         {
@@ -759,7 +779,7 @@ void callRobotTask(char status)
           string desaccelerationCount = to_string(mapDataList[i].desaccelerationCount);
 
           string dataString = meanEncoderCount + "," + curve + "," + curveSpeed + "," + accelerationCount + "," + desaccelerationCount + "\n";
-          appendFile(LittleFS, "/Map_Data.txt", dataString.c_str());
+          appendFile("/Map_Data.txt", dataString.c_str());
         }
       }
       firstTimeProcess = false;
@@ -775,7 +795,6 @@ void callRobotTask(char status)
     analogWrite(in_esq1,255);
     analogWrite(in_esq2,255);
 
-    // analogWrite(PROPELLER_PIN, 0);
     Brushless.write(0);
   break;
   }
@@ -825,8 +844,6 @@ void setup()
   encoder.attachFullQuad(enc_eq_A, enc_eq_B);
   encoder2.attachFullQuad(enc_dir_B, enc_dir_A);
 
-  digitalWrite(stby, HIGH);
-
   encoder.clearCount();
   encoder2.clearCount();
 
@@ -836,8 +853,8 @@ void setup()
   delay(5000);
   Brushless.write(0);
 
-  if(!LittleFS.begin(FORMAT_LITTLEFS_IF_FAILED)){
-        SerialBT.println("LittleFS Mount Failed");
+  if(!SPIFFS.begin(true)){
+        SerialBT.println("SPIFFS Mount Failed");
         return;
   }
 
@@ -866,8 +883,6 @@ void setup()
   encoder.clearCount();
   encoder2.clearCount();
 
-  // deleteFile(LittleFS, "/Map_Data2.txt");
-
   xTaskCreatePinnedToCore(calculateRobotSpeed,"Velocidade",10000,NULL,1,NULL,1);
   //xTaskCreatePinnedToCore(ler_laterais,"Sensores Laterais",4000,NULL,1,NULL,0);
 }
@@ -877,8 +892,8 @@ void loop()
   bluetoothRead();
 
   callRobotTask(lastReceivedChar);
-  /* SerialBT.print(encoder.getCount());
-  SerialBT.print(" || ");
-  SerialBT.println(encoder2.getCount()); */
+  // SerialBT.print(encoder.getCount());
+  // SerialBT.print(" || ");
+  // SerialBT.println(encoder2.getCount());
   // SerialBT.println(robotSpeed);
 }
