@@ -4,7 +4,51 @@
 #include <QTRSensors.h>
 #include <Adafruit_NeoPixel.h>
 #include <BluetoothSerial.h>
+#include <ESP32Servo.h>
 
+#include <cmath>
+#include <vector>
+#include <iostream>
+// #include "FS.h"
+// #include <LittleFS.h>
+#include <string>
+#include <iostream>
+#include <fstream>
+#include "SPIFFS.h"
+
+
+using namespace std;
+
+class Map_Data{
+public:
+  float leftEncoderCount;
+  float rightEncoderCount;
+  float meanEncoderCount;
+  float leftEncoderDelta;
+  float rightEncoderDelta;
+  float meanEncoderDelta;
+  float curveSpeed;
+  float lineSpeed;
+  int curve;
+  float accelerationSpace;
+  float desaccelerationSpace;
+  float accelerationCount;
+  float desaccelerationCount;
+
+  Map_Data(float leftEncoderCount = 0, float rightEncoderCount = 0, float meanEncoderCount = 0,
+              float leftEncoderDelta = 0, float rightEncoderDelta = 0, float meanEncoderDelta = 0, float curveSpeed = 0,
+              float lineSpeed = 0, int curve = 0, float accelerationSpace = 0,
+              float desaccelerationSpace = 0, float accelerationCount = 0, float desaccelerationCount = 0)
+      : leftEncoderCount(leftEncoderCount), rightEncoderCount(rightEncoderCount), meanEncoderCount(meanEncoderCount),
+      leftEncoderDelta(leftEncoderDelta), rightEncoderDelta(rightEncoderDelta), meanEncoderDelta((leftEncoderDelta + rightEncoderDelta)/2), curveSpeed(curveSpeed),
+      lineSpeed(lineSpeed), curve(curve), accelerationSpace(accelerationSpace), desaccelerationSpace(desaccelerationSpace), accelerationCount(accelerationCount), desaccelerationCount(desaccelerationCount){}
+};
+
+std::vector<Map_Data> mapDataListManual;
+std::vector<Map_Data> mapDataListSensor;
+std::vector<Map_Data> mapDataList;
+
+Servo Brushless;
 ESP32Encoder encoder;
 ESP32Encoder encoder2;
 QTRSensors sArray;
@@ -16,12 +60,150 @@ const uint32_t G = led_stip.Color(0,255,0);
 const uint32_t B = led_stip.Color(0,0,255);
 const uint32_t W = led_stip.Color(255,255,255);
 
-u_int64_t tempo;
-
 bool FirstTimeOnSwitchCase = true;
 
 long int calculate_rpm_esq();
 long int calculate_rpm_dir();
+
+void writeFile(const char * path, const char * message){
+  File file = SPIFFS.open(path, FILE_WRITE);
+  if(!file){
+    SerialBT.println("- failed to open file for writing");
+    return;
+  }
+  if(file.print(message)){
+    SerialBT.println("- file written");
+  } else {
+    SerialBT.println("- write failed");
+  }
+  file.close();
+}
+
+void appendFile(const char * path, const char * message){
+  File file = SPIFFS.open(path, FILE_APPEND);
+  if(!file){
+    SerialBT.println("- failed to open file for appending");
+    return;
+  }
+  if(file.print(message)){
+    SerialBT.println("- message appended");
+  } else {
+    SerialBT.println("- append failed");
+  }
+  file.close();
+}
+
+void deleteFile(fs::FS &fs, const char * path){
+    if(fs.remove(path)){
+        SerialBT.println("- file deleted");
+    } else {
+        SerialBT.println("- delete failed");
+    }
+}
+
+void readFile(const char * path){
+  File file = SPIFFS.open(path);
+  if(!file){
+    SerialBT.println("- failed to open file for reading");
+    return;
+  }
+
+  static int lineIndex = 0;
+  String dataString;
+  while (file.available()) {
+    dataString = file.readStringUntil('\n');
+    if (dataString.length() > 0) {
+      // Separa as informações em um vetor de strings
+      int commaIndex = dataString.indexOf(',');
+      String meanEncoderCount = dataString.substring(0, commaIndex);
+
+      int secondCommaIndex = dataString.indexOf(',', commaIndex + 1);
+      String stringCurve = dataString.substring(commaIndex + 1, secondCommaIndex);
+
+      int thirdCommaIndex = dataString.indexOf(',', secondCommaIndex + 1);
+      String curveSpeed = dataString.substring(secondCommaIndex + 1, thirdCommaIndex);
+
+      int fourthCommaIndex = dataString.indexOf(',', thirdCommaIndex + 1);
+      String accelerationCount = dataString.substring(thirdCommaIndex + 1, fourthCommaIndex);
+
+      String desaccelerationCount = dataString.substring(fourthCommaIndex + 1);
+      
+      float lmeanEncoderCount = atof(meanEncoderCount.c_str());
+      float lcurveSpeed = atof(curveSpeed.c_str());
+      float laccelerationCount = atof(accelerationCount.c_str());
+      float ldesaccelerationCount = atof(desaccelerationCount.c_str());
+      int curve = atoi(stringCurve.c_str());
+
+      SerialBT.print(lmeanEncoderCount);
+      SerialBT.print(",");
+      SerialBT.print(curve);
+      SerialBT.print(",");
+      SerialBT.print(lcurveSpeed);
+      SerialBT.print(",");
+      SerialBT.print(laccelerationCount);
+      SerialBT.print(",");
+      SerialBT.println(ldesaccelerationCount);
+      
+      
+      mapDataList.push_back(Map_Data(0.0f, 0.0f, lmeanEncoderCount, 0.0f,0.0f,0.0f,lcurveSpeed,0.0f,curve,0.0f,0.0f,laccelerationCount,ldesaccelerationCount));
+    }
+  }
+  SerialBT.println("Terminei de passar os dados pra RAM");
+  // for(short i = 0; i<mapDataList.size();i++)
+  // {
+  //   SerialBT.println(mapDataList[i].meanEncoderCount);
+  // }
+  // SerialBT.println(path);
+  // String filePath = ".";
+  //File outputFile = SD.open(filePath, FILE_WRITE);
+
+  
+  file.close();
+}
+
+// void escreverArquivo(const char * filename){
+//   String filePath = "TestMap.txt" ;
+//   File inputFile = SD.open(filePath,FILE_READ );
+//   File file = LittleFS.open(filename, "w");
+
+//   while(inputFile.available()){
+//     file.write(inputFile.read());
+//     SerialBT.write(inputFile.read());
+//   }
+  
+//   file.close();
+//   inputFile.close();
+
+// }
+
+void escreverArquivo(fs::FS &fs,const char* outputfile) {
+  // Usar std::ifstream para abrir o arquivo no Windows
+  const char* filePath = "C:\\Users\\henri\\OneDrive\\Documentos\\VSCode\\LineFollower_SemrehV2_Code\\TestMap.txt"; // Coloque o caminho completo do arquivo no Windows
+
+  File file = fs.open(outputfile);
+  if(!file || file.isDirectory()){
+    SerialBT.println("- failed to create OutputFIle");
+    return;
+  }
+
+  std::ifstream inputFile(filePath, std::ios::binary); // Abrir arquivo em modo binário para leitura
+
+
+  if (!inputFile) {
+    SerialBT.println("failed to open inputFile");
+    return;
+  }
+
+  // Copiar dados do arquivo de entrada para o arquivo de saída
+  char buffer;
+  while (inputFile.get(buffer)) {
+    file.write(buffer);
+    SerialBT.println(buffer);
+  }
+
+  file.close();
+  inputFile.close();
+}
 
 void ler_sensores()
 {
@@ -38,14 +220,23 @@ void calcula_PID(float KpParam, float KdParam)
   erro_anterior = erro_f;
 }
 
-void calcula_PID_rot(float KpParamRot , float KdParamRot , float KiParamrot){
-  erro_f_rot = (calculate_rpm_esq() - calculate_rpm_dir());
-  P_rot = erro_f_rot;
-  D_rot = erro_f_rot - erro_anterior_rot;
-  I_rot += erro_f_rot;
-  PIDrot =(KpParamRot*P_rot)+(KdParamRot*D_rot)+(KiParamRot*I_rot);
-  erro_anterior_rot = erro_f_rot;
+float rotacionalErrorBuffer[9]; // buffer to store the last 5 values of translationalError
+int rotacionalErrorIndex = 0; // index to keep track of the current position in the buffer
+void calcula_PID_rot(float KpParamRot , float KdParamRot , float KiParamRot){
+  rotacionalError = (calculate_rpm_esq() - calculate_rpm_dir());
+  P_rot = rotacionalError;
+  D_rot = rotacionalError - lastRotacionalError;
   
+  // update the buffer and calculate the sum of the last 5 values
+  // rotacionalErrorBuffer[rotacionalErrorIndex] = rotacionalError;
+  // rotacionalErrorIndex = (rotacionalErrorIndex + 1) % 9;
+  // float sum = 0;
+  // for (int i = 0; i < 9; i++) {
+  //   sum += rotacionalErrorBuffer[i];
+  // }
+  // I_Translacional = sum;
+  PIDrot =(KpParamRot*P_rot)+(KdParamRot*D_rot);
+  lastRotacionalError = rotacionalError;
 }
 
 float curva_acel(float pwm_goal)
@@ -53,8 +244,12 @@ float curva_acel(float pwm_goal)
 
   if (pwm_goal > last_pwm)
   {
-    last_pwm += 10;
-    run_pwm = last_pwm;
+    run_pwm = pwm_goal;
+  }
+  else if (pwm_goal < last_pwm)
+  {
+    last_pwm -= 0.02f;
+    run_pwm = pwm_goal;
   }
   else
   {
@@ -63,186 +258,94 @@ float curva_acel(float pwm_goal)
   return run_pwm;
 }
 
-void controle_motores(float motorPWM)
+float translacionalErrorBuffer[9]; // buffer to store the last 5 values of translationalError
+int translacionalErrorIndex = 0; // index to keep track of the current position in the buffer
+
+// int delta_time = micros();
+// int last_time = 0;
+// int n_pid = 0;
+
+void calcula_PID_translacional(float KpParam_Translacional, float KdParam_Translacional,float KiParam_Translacional, float desiredSpeed)
 {
-  velesq = curva_acel(motorPWM) + PID;
-  veldir = curva_acel(motorPWM) - PID;
+  translacionalError = curva_acel(desiredSpeed) - robotSpeed;
+  P_Translacional = translacionalError;
+  D_Translacional = translacionalError - lastTranslacionalError;
+
+  // update the buffer and calculate the sum of the last 5 values
+  translacionalErrorBuffer[translacionalErrorIndex] = translacionalError;
+  translacionalErrorIndex = (translacionalErrorIndex + 1) % 9;
+  float sum = 0;
+  for (int i = 0; i < 9; i++) {
+    sum += translacionalErrorBuffer[i];
+  }
+  I_Translacional = sum;
+
+  PIDTranslacional = (KpParam_Translacional * P_Translacional) + (KdParam_Translacional * D_Translacional) + (KiParam_Translacional * I_Translacional);
+  lastTranslacionalError = translacionalError;
+}
+
+void motorControl()
+{
+  velesq = PIDTranslacional + PID;
+  veldir = PIDTranslacional - PID;
 
   if(veldir >= 0)
   {
     if(veldir > MAX_PWM) veldir = MAX_PWM;
-    digitalWrite(in_dir1,LOW);
-    digitalWrite(in_dir2,HIGH);
+    analogWrite(in_dir1,LOW);
+    analogWrite(in_dir2,veldir);
   }
   else
   {
     veldir = (-1) * veldir;
-    digitalWrite(in_dir1,HIGH);
-    digitalWrite(in_dir2,LOW);
+    analogWrite(in_dir1,veldir);
+    analogWrite(in_dir2,LOW);
   }
-  analogWrite(PWM_RIGHT,veldir);
 
   if(velesq >= 0)
   {
     if (velesq > MAX_PWM) velesq = MAX_PWM;
-    digitalWrite(in_esq1,LOW);
-    digitalWrite(in_esq2,HIGH);
+    analogWrite(in_esq1,LOW);
+    analogWrite(in_esq2,velesq);
   }
   else
   {
     velesq = (-1) * velesq;
-    digitalWrite(in_esq1,HIGH);
-    digitalWrite(in_esq2,LOW);
+    analogWrite(in_esq1,velesq);
+    analogWrite(in_esq2,LOW);
   }
-  analogWrite(PWM_LEFT,velesq);
 }
 
-void controle_motores_rot(float motorPWM)
+void motorControlOnLine()
 {
-  velesqrot = motorPWM + PIDrot;
-  veldirrot = motorPWM - PIDrot;
+  velesq = PIDTranslacional  + PIDrot;
+  veldir = PIDTranslacional  - PIDrot;
 
-  if(veldirrot >= 0)
+  if(veldir >= 0)
   {
-    if(veldirrot > MAX_PWM) veldirrot = MAX_PWM;
-    digitalWrite(in_dir1,LOW);
-    digitalWrite(in_dir2,HIGH);
+    if(veldir > MAX_PWM) veldir = MAX_PWM;
+    analogWrite(in_dir1,LOW);
+    analogWrite(in_dir2,veldir);
   }
   else
   {
-    veldirrot = (-1) * veldirrot;
-    digitalWrite(in_dir1,HIGH);
-    digitalWrite(in_dir2,LOW);
+    veldir = (-1) * veldir;
+    analogWrite(in_dir1,veldir);
+    analogWrite(in_dir2,LOW);
   }
-  analogWrite(PWM_RIGHT,veldirrot);
 
-  if(velesqrot >= 0)
+  if(velesq >= 0)
   {
-    if (velesqrot > MAX_PWM) velesqrot = MAX_PWM;
-    digitalWrite(in_esq1,LOW);
-    digitalWrite(in_esq2,HIGH);
+    if (velesq > MAX_PWM) velesq = MAX_PWM;
+    analogWrite(in_esq1,LOW);
+    analogWrite(in_esq2,velesq);
   }
   else
   {
-    velesqrot = (-1) * velesqrot;
-    digitalWrite(in_esq1,HIGH);
-    digitalWrite(in_esq2,LOW);
+    velesq = (-1) * velesq;
+    analogWrite(in_esq1,velesq);
+    analogWrite(in_esq2,LOW);
   }
-  analogWrite(PWM_LEFT,velesqrot);
-}
-
-struct MotorControlData {
-    float encoderValueBegin;
-    float encoderValueEnd;
-    int motorPWM;
-};
-
-std::vector<MotorControlData> trackMap = {
-  //{encoderValueBegin, encoderValueEnd, motorPWM},
-    {0,	450,	119}, //começo até primeira curva
-    {506,	1064,	144}, // primeira curva
-    {1250,	2050,	237}, //reta pré V
-    {2521,	2947,	167}, // curva de entrada do V
-    {3000,	3442,	174}, // primeira reta do V
-    {3546,	4081,	141}, // V
-    {4300,	5075,	119}, // segunda reta do V
-    {5075,	5566,	151}, // curva saída do V
-    {5900,	6416,	240}, // reta pós V
-    {6880,	8570,	135}, // primeira bola
-    {8700,	9294,	240}, // reta pós primeira bola
-    {9782,	11221,	126}, // segunda bola
-    {11550,	12151,	220}, // reta pós segunda bola
-    {12700,	14351,	240}, // reta pré balão
-    {14670,	17665,	181}, //balão
-    {17665,	18485,	255}, //reta pós balão
-    {18830,	21655,	120}, //zig zag
-    {21950,	22172,	230}, // reta pré 180
-    {22504,	23603,	139}, //180
-    {24000,	25015,	237}, //reta pós 180
-    {25208,	25626,	192}, // curva de quebra de reta
-    {25626,	26024,	210}, //ainda curva de quebra de reta
-    {26500,	26690,	230}, //reta
-    {27052,	28061,	127}, //curva cogumelo
-    {28200,	28489,	180}, //reta pos cogumelo
-    {28490,	30068,	180}, //curva longa
-    //{30200,	30444,	182}, //reta praticamente irrelevante ######verificar#######################
-    //{30690,	31262,	136}, //curva pós reta insignificante
-    //{31262,	31575,	190}, //curva pré reta boa
-    //{32300,	32853,	237}, //reta cruzada 1
-    //{33231,	34019,	135}, //primeira curva do coração
-    //{34019,	34162,	255}, //reta no meio do coração
-    {34622,	35380,	137}, //segunda curva do coração
-    {37000,	37800,	240}, //reta cruzada 2
-    {39000,	39600,	240}, //primeira reta retangulo
-    {39631,	40327,	153}, //curva pós primeira reta do ret
-    {40374,	40862,	136}, //curva do retangulo pré reta boa
-    {41900,	42981,	240}, //reta boa
-    {43381,	43767,	157}, //curva pós reta boa
-    {43767,	44134,	157}, //mais uma reta merda
-    {44545,	44912,	154}, //curva pós reta merda
-    {44912,	45556,	150}, //reta meia bomba
-    {45977,	47213,	150}, //bolão
-    {47500,	47863,	168}, //primeira curva da sequencia final de curvas
-    {47905,	50381,	155}, //final de pista
-    {50591, 54000, 155},
-    {54001, 99999, 0}
-};
-
-void motorControlWithMap(int encVal)
-{
-  bool not_mapped = true;
-  for (const auto& MotorControlData : trackMap)
-  {
-    float firstEncoderValue = MotorControlData.encoderValueBegin;
-    float secondEncoderValue = MotorControlData.encoderValueEnd;
-    int pwmDeliveredToMotors = MotorControlData.motorPWM;
-
-    if (encVal >= firstEncoderValue && encVal <= secondEncoderValue)
-    {
-      if(pwmDeliveredToMotors>=220)
-      {
-        calcula_PID(KpR, KdR);
-        controle_motores(pwmDeliveredToMotors);
-      }
-
-      else
-      { 
-        calcula_PID(Kp, Kd);
-        controle_motores(pwmDeliveredToMotors);
-      }
-      not_mapped = false;
-      //return;
-    }
-  }
-  if(not_mapped){
-    calcula_PID(Kp, Kd);
-    controle_motores(120);
-  }
-}
-
-void controle_com_mapeamento(int encVal)
-{
-  if(encVal<200) {calcula_PID(Kp,Kd); controle_motores(120);} //começo de pista lateral direito até primeira marcaçao
-  else if (encVal >= 223 && encVal <= 866) {calcula_PID(Kp,Kd); controle_motores(110);}
-  else if (encVal >= 930 && encVal <= 1061) {calcula_PID(Kp,Kd); controle_motores(255);}
-  else if (encVal >= 1600 && encVal <= 1900) {calcula_PID(Kp,Kd); controle_motores(115);}
-  else if (encVal >= 1940 && encVal <= 2000) {calcula_PID(Kp,Kd); controle_motores(255);}
-  else if (encVal >= 2600 && encVal <= 2700) {calcula_PID(Kp,Kd); controle_motores(115);}
-  else if (encVal >= 2750 && encVal <= 2910) {calcula_PID(Kp,Kd); controle_motores(200);}
-  else if (encVal >= 3407 && encVal <= 5080) {calcula_PID(Kp,Kd); controle_motores(210);} //bolona
-  else if (encVal >= 5450 && encVal <= 6600) {calcula_PID(Kp,Kd); controle_motores(169);}
-  else if (encVal >= 6800 && encVal <= 6900) {calcula_PID(Kp,Kd); controle_motores(126);}
-  else if (encVal >= 7000 && encVal <= 7300) {calcula_PID(Kp,Kd); controle_motores(150);}
-  else if (encVal >= 7950 && encVal <= 8200) {calcula_PID(Kp,Kd); controle_motores(200);}
-  else if (encVal >= 9750 && encVal <= 11300) {calcula_PID(KpR,KdR); controle_motores(240);} //reta cruzamen
-  else if (encVal >= 12300 && encVal <= 13300) {calcula_PID(KpR,KdR); controle_motores(150);} //pós curz
-  else if (encVal >= 13900 && encVal <= 14800) {calcula_PID(KpR,KdR); controle_motores(120);} //180 graus
-  else if (encVal >= 14900 && encVal <= 15800) {calcula_PID(KpR,KdR); controle_motores(240);} //reta antes do zig
-  else if (encVal >= 15801 && encVal <= 18300) {digitalWrite(in_dir1,LOW);digitalWrite(in_dir2,HIGH);analogWrite(PWM_RIGHT,200);digitalWrite(in_esq1,LOW);digitalWrite(in_esq2,HIGH);analogWrite(PWM_LEFT,185);} //zig PARA IR PRA DIREITA AUMENTAR PWM ESQUERDA (AINDA ESTÁ INDO PRA A ESQUERDA)
-  // else if (encVal >= 19800 && encVal <= 21000) {calcula_PID(KpR,KdR); controle_motores(250);}
-  // else if (encVal >= 22000 && encVal <= 25000) {calcula_PID(KpR,KdR); controle_motores(250);}
-  else if (encVal>26500) {analogWrite(PWM_LEFT,0); analogWrite(PWM_RIGHT,0); analogWrite(PROPELLER_PIN, 0);}
-  else{calcula_PID(Kp,Kd); controle_motores(110); led_stip.setPixelColor(0,G);}
 }
 
 void ler_laterais(void *parameter){
@@ -268,34 +371,29 @@ void ler_laterais(void *parameter){
     {
       if(medLateralEsq < 2000 && medLateralDir > 3500 && readingWhiteLeft == false) //lê apenas marcação esquerda
       {
-        SerialBT.print(';'); 
-        SerialBT.print(encoder.getCount()); 
-        SerialBT.print(';'); 
-        SerialBT.print(encoder2.getCount()); 
-        SerialBT.print(';'); 
-        SerialBT.println((encoder.getCount() + encoder2.getCount())/2);
+        // SerialBT.print(';'); 
+        // SerialBT.print(encoder.getCount()); 
+        // SerialBT.print(';'); 
+        // SerialBT.print(encoder2.getCount()); 
+        // SerialBT.print(';'); 
+        // SerialBT.println((encoder.getCount() + encoder2.getCount())/2);
         led_stip.setPixelColor(1, 0, 0, 255);
         led_stip.show();
-        // digitalWrite(buzzer, HIGH);  // Ligar o buzzer
-        vTaskDelay(pdMS_TO_TICKS(30));  // Manter o buzzer ligado por 100ms
-        //digitalWrite(buzzer, LOW);   // Desligar o buzzer
+        vTaskDelay(pdMS_TO_TICKS(20));  // Manter o buzzer ligado por 100ms
         led_stip.setPixelColor(1, 0, 0, 0);
         led_stip.show();
         readingWhiteLeft = true;
-        digitalWrite(buzzer, HIGH);
+        mapDataList.push_back(Map_Data(encoder.getCount(), encoder2.getCount(), (encoder.getCount()+encoder2.getCount())/2));
+
       }
 
-      else if(medLateralEsq > 3500 && medLateralDir < 2000 && readingWhiteRight == false && firstTimeRight == false) //lê apenas marcação direita
+      else if(medLateralEsq > 3000 && medLateralDir < 2900 && readingWhiteRight == false && firstTimeRight == false) //lê apenas marcação direita
       {
-        tempo = millis();
         SerialBT.println("INICIO/FIM");
-        encoder2.clearCount();
-        encoder.clearCount();
+        // encoder2.clearCount();
+        // encoder.clearCount();
         firstTimeRight = true;
         readingWhiteRight = true;
-        digitalWrite(buzzer, HIGH);
-        // vTaskDelay(pdMS_TO_TICKS(40));  // Manter o buzzer ligado por 100ms
-        // digitalWrite(buzzer, LOW);   // Desligar o buzzer
       }
     }
 
@@ -303,13 +401,173 @@ void ler_laterais(void *parameter){
     {
       readingWhiteLeft = false;
       readingWhiteRight = false;
-      digitalWrite(buzzer, LOW);
     }
     medLateralDir = 0;
     medLateralEsq = 0;
 
     countLateral = countLateral % MED_TAMANHO;
     vTaskDelay(pdMS_TO_TICKS(8));  // Pausa de 5ms entre as verificações
+  }
+}
+
+void calculateRobotSpeed(void *parameter) //m/s
+{
+  TickType_t xLastWakeTime = xTaskGetTickCount();
+  while(true)
+  {
+    leftEncoderPulse = encoder.getCount();
+    rightEncoderPulse = encoder2.getCount();
+    vTaskDelayUntil(&xLastWakeTime,pdMS_TO_TICKS(SAMPLING_TIME));  // Pausa de 10ms entre as verificações
+    leftDistanceTravelled = encoder.getCount() - leftEncoderPulse;
+    rightDistanceTravelled = encoder2.getCount() - rightEncoderPulse;
+    robotSpeed = ((leftDistanceTravelled + rightDistanceTravelled)/2)* MM_PER_COUNT / SAMPLING_TIME; //m/s
+  }
+}
+
+void tratamento()
+{
+  if(!mapDataList.empty()) //verifica se a lista não está vazia
+  {
+    for(size_t i = 0; i < mapDataList.size(); i++) //percorre a lista
+    {
+      Map_Data& currentData = mapDataList[i]; //pega o endereço do objeto do tipo Map_Data atual a lista
+      if(i == 0) //caso seja o primeiro item da lista, a variação de espaço vai ser igual ao quanto o robô andou até agora
+      {
+        currentData.leftEncoderDelta = currentData.leftEncoderCount;
+        currentData.rightEncoderDelta = currentData.rightEncoderCount;
+      }
+      else //se não for o primeiro da lista, a variação de espaço é igual ao quanto ele andou até agora menos o quanto ele andou até a marcação anterior
+      {
+        Map_Data& previousData = mapDataList[i-1];
+        currentData.leftEncoderDelta = currentData.leftEncoderCount - previousData.leftEncoderCount;
+        currentData.rightEncoderDelta = currentData.rightEncoderCount - previousData.rightEncoderCount;
+      }
+      currentData.meanEncoderCount = (currentData.leftEncoderCount + currentData.rightEncoderCount)/2;
+      
+      //transforma o delta pulsos para delta em metros
+      float leftEncoderDeltaMeter = (MM_PER_COUNT * currentData.leftEncoderDelta)/1000;
+      float rightEncoderDeltaMeter = (MM_PER_COUNT * currentData.rightEncoderDelta)/1000;
+      float meanEncoderDeltaMeter = (leftEncoderDeltaMeter + rightEncoderDeltaMeter)/2;
+
+      currentData.meanEncoderDelta = meanEncoderDeltaMeter;
+
+      if(leftEncoderDeltaMeter == rightEncoderDeltaMeter) //verificação para que não haja divisão por zero no cálculo de curveRadius
+      {
+        currentData.curve = 0;
+      }
+      else
+      {
+        //calcula o raio da curva
+        float curveRadius = abs((DISTANCEWHEELTOCENTER/2) * ((leftEncoderDeltaMeter+rightEncoderDeltaMeter)/(leftEncoderDeltaMeter-rightEncoderDeltaMeter)));
+
+        if(curveRadius <= 0.5) //se o raio da curva for menor ou igual do que 50cm(0.5m), então é uma curva 
+        {
+          currentData.curve = 1;
+          currentData.curveSpeed = pow((curveRadius*FRICTION)*(GRAVITY+(BRUSHLESSFORCE/MASS)),0.5); //calcula a velocidade para fazer a curva
+        }
+        else //se for maior é uma reta
+        {
+          currentData.curve = 0;
+        }
+      }
+    }
+    for(short i = 0; i < mapDataList.size(); i++)
+    {
+      // SerialBT.print(mapDataList[i].meanEncoderCount);SerialBT.print("\t");
+      // SerialBT.print(mapDataList[i].meanEncoderDelta);SerialBT.print("\t");
+      // SerialBT.print(mapDataList[i].curveSpeed);SerialBT.print("\t");
+      //SerialBT.println(mapDataList[i].curve);
+    }
+  }
+  else
+  {
+    SerialBT.println("A lista está vazia");
+  }
+
+  float accelerationSpaceMeter;
+  float desaccelerationSpaceMeter;
+  for(int i = 0; i < mapDataList.size(); i++)
+  {
+    if(mapDataList[i].curve == 0) //entra se for uma reta
+    {
+      if (i != mapDataList.size()-1) //entra se não for o ultimo item da lista
+      {
+        if(i != 0) //entra se não for o primiero item da lista
+        {
+          //calcula o espaço para aceleração e desaceleração
+          accelerationSpaceMeter = (pow(MAXSPEED,2) - pow(mapDataList[i-1].curveSpeed,2))/(2*acceleration);
+          desaccelerationSpaceMeter = -((pow(mapDataList[i+1].curveSpeed,2) - pow(MAXSPEED,2))/(2*acceleration));
+
+          //transforma metros em pulsos de encoder
+          mapDataList[i].accelerationSpace = (accelerationSpaceMeter/MM_PER_COUNT)*1000;
+          mapDataList[i].desaccelerationSpace = (desaccelerationSpaceMeter/MM_PER_COUNT)*1000;
+        }
+        else //entra se for o primeiro item da lista
+        {
+          //calcula o espaço para aceleração e desaceleração
+          accelerationSpaceMeter = (pow(MAXSPEED,2))/(2*acceleration);
+          desaccelerationSpaceMeter = -((pow(mapDataList[i+1].curveSpeed,2) - pow(MAXSPEED,2))/(2*acceleration));
+
+          //transforma metros em pulsos de encoder
+          mapDataList[i].accelerationSpace = (accelerationSpaceMeter/MM_PER_COUNT)*1000;
+          mapDataList[i].desaccelerationSpace = (desaccelerationSpaceMeter/MM_PER_COUNT)*1000;
+        }
+      }
+      else //se for o ultimo item da lista
+      {
+        //calcula o espaço para aceleração e desaceleração
+        accelerationSpaceMeter = (pow(MAXSPEED,2) - pow(mapDataList[i-1].curveSpeed,2))/(2*acceleration);
+        desaccelerationSpaceMeter = -((pow(2,2) - pow(MAXSPEED,2))/(2*acceleration));
+
+        //transforma metros em pulsos de encoder
+        mapDataList[i].accelerationSpace = (accelerationSpaceMeter/MM_PER_COUNT)*1000.0f;
+        mapDataList[i].desaccelerationSpace = (desaccelerationSpaceMeter/MM_PER_COUNT)*1000.0f;
+      }    
+    }
+    if(i==0)
+    {
+      if((accelerationSpaceMeter + desaccelerationSpaceMeter) < mapDataList[i].meanEncoderDelta) //se a soma dos espaços for menor do que o tamanho da reta
+      {
+        mapDataList[i].accelerationCount = mapDataList[i].accelerationSpace;
+        mapDataList[i].desaccelerationCount = mapDataList[i].meanEncoderCount - mapDataList[i].desaccelerationSpace;
+      }
+      else
+      {
+        mapDataList[i].accelerationCount = (((mapDataList[i].meanEncoderDelta/MM_PER_COUNT)*1000)/2);
+        mapDataList[i].desaccelerationCount = mapDataList[i].meanEncoderCount - (((mapDataList[i].meanEncoderDelta/MM_PER_COUNT)*1000)/2);
+      }
+    }
+    else
+    {
+      if((accelerationSpaceMeter + desaccelerationSpaceMeter) < mapDataList[i].meanEncoderDelta) //se a soma dos espaços for menor do que o tamanho da reta
+      {
+        mapDataList[i].accelerationCount = mapDataList[i-1].meanEncoderCount + mapDataList[i].accelerationSpace;
+        mapDataList[i].desaccelerationCount = mapDataList[i].meanEncoderCount - mapDataList[i].desaccelerationSpace;
+      }
+      else
+      {
+        mapDataList[i].accelerationCount = (((mapDataList[i].meanEncoderDelta/MM_PER_COUNT)*1000)/2) + mapDataList[i-1].meanEncoderCount;
+        mapDataList[i].desaccelerationCount = mapDataList[i].meanEncoderCount - (((mapDataList[i].meanEncoderDelta/MM_PER_COUNT)*1000)/2);
+      }
+    }
+  }
+}
+
+void hybridMapping(const std::vector<Map_Data>& manualData, const std::vector<Map_Data>& sensorData, std::vector<Map_Data>& resultData) {
+  float thresholdSort = 2000;
+  resultData.resize(manualData.size());
+  for (std::size_t i = 0; i < manualData.size(); ++i) {
+    bool found = false;
+    for (std::size_t j = 0; j < sensorData.size(); ++j) {
+      if (std::abs (manualData[i].meanEncoderCount - sensorData[j].meanEncoderCount) <= thresholdSort){
+        resultData[i] = sensorData[j];
+        found = true;
+        break;
+      }
+    }
+    if(!found){
+      resultData[i] = manualData[i];
+    }
   }
 }
 
@@ -335,43 +593,209 @@ void callRobotTask(char status)
   case '1': //Map
     ler_sensores();
     calcula_PID(Kp,Kd);
-    controle_motores(MAPPING_PWM);
+    calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 0.75);
+    motorControl();
   break;
 
   case '2': //Run with track map
-    ler_sensores();
-    motorControlWithMap((encoder.getCount()+encoder2.getCount())/2);
+    static short i = 0;
+    if(i < mapDataList.size())
+    {
+      float quantoAndouAteAgora = (encoder.getCount() + encoder2.getCount())/2; //calcula o quanto já andou até o momento
+      if(quantoAndouAteAgora <= mapDataList[i].meanEncoderCount) //se o valor de encoder da marcação for maior do que o quanto andou até o momento
+      {
+        if(i != mapDataList.size()-1)
+        {
+          if(mapDataList[i].curve == 0) //entra no if se for uma reta
+          {
+            if(quantoAndouAteAgora < mapDataList[i].accelerationCount)
+            {
+              ler_sensores();
+              calcula_PID(Kp,Kd);
+              calcula_PID_translacional(KpTrans, KdTrans, KiTrans, MAXSPEED);
+              motorControl();
+              led_stip.setPixelColor(0,G);
+              led_stip.show();
+            }
+            else if(quantoAndouAteAgora >= mapDataList[i].desaccelerationCount)
+            {
+              ler_sensores();
+              calcula_PID(Kp,Kd);
+              calcula_PID_translacional(KpTrans, KdTrans, KiTrans, (mapDataList[i+1].curveSpeed));
+              motorControl();
+              led_stip.setPixelColor(0,R);
+              led_stip.show();
+            }
+            else
+            {
+              ler_sensores();
+              calcula_PID(Kp,Kd);
+              calcula_PID_translacional(KpTrans, KdTrans, KiTrans, MAXSPEED);
+              motorControl();
+              led_stip.setPixelColor(0,B);
+              led_stip.show();
+            }
+          }
+          else //caso não seja uma reta, ou seja curva
+          {
+            ler_sensores();
+            calcula_PID(Kp,Kd);
+            calcula_PID_translacional(KpTrans, KdTrans, KiTrans,(mapDataList[i].curveSpeed));
+            motorControl();
+            led_stip.setPixelColor(0,255,255,255);
+            led_stip.show();
+          }
+        }
+        else //é o ultimo valor da lista
+        {
+          //controla o robô na pista com a velocidade para fazer a curva
+          ler_sensores();
+          calcula_PID(Kp,Kd);
+          calcula_PID_translacional(KpTrans, KdTrans, KiTrans, 3.5);
+          motorControl();
+        }
+      }
+      else //se ele já passou da marcação lateral, então incrementa o i, indo para o próximo intervalo
+      {
+        i++;
+      }
+    }
+    else //se acabou a lista para os motores
+    {
+      analogWrite(in_dir1,255);
+      analogWrite(in_dir2,255);
+
+      analogWrite(in_esq1,255);
+      analogWrite(in_esq2,255);
+      Brushless.write(0);
+    }
   break;
 
   case '3': //Abort
-    analogWrite(PWM_LEFT,0);
-    analogWrite(PWM_RIGHT,0);
-    analogWrite(PROPELLER_PIN, 0);
+    // static bool firstTimeOn3 = true;
+    // if(firstTimeOn3 == true)
+    // {
+    //   pinMode(in_esq1, OUTPUT);
+    //   pinMode(in_esq2, OUTPUT);
+    //   pinMode(in_dir1, OUTPUT);
+    //   pinMode(in_dir2, OUTPUT);
+
+    //   analogWrite(in_dir1,255);
+    //   analogWrite(in_dir2,255);
+
+    //   analogWrite(in_esq1,255);
+    //   analogWrite(in_esq2,255);
+
+    //   firstTimeOn3 = false;
+    // }
+
+    analogWrite(in_dir1,255);
+    analogWrite(in_dir2,255);
+
+    analogWrite(in_esq1,255);
+    analogWrite(in_esq2,255);
+
+    Brushless.write(0);
   break;
 
-  case '4': //Pausa locomoção
-    analogWrite(PWM_LEFT,0);
-    analogWrite(PWM_RIGHT,0);
+  case '4': //Safe
+  static bool firstTimeOnFlashToRAM4 = true;
+  if(firstTimeOnFlashToRAM4 == true)
+  {
+    readFile("/SafeSabado.txt");
+    firstTimeOnFlashToRAM4 = false;
+  }
   break;
 
-  case '6': //Propeller
-    static bool firstTimeOnPropeller = true;
-    if(firstTimeOnPropeller == true)
+  case '5': //adiciona marcação
+    // SerialBT.print(';'); 
+    // SerialBT.print(encoder.getCount()); 
+    // SerialBT.print(';'); 
+    // SerialBT.print(encoder2.getCount());
+    status = '1';
+    lastReceivedChar = '1';
+    //SerialBT.println(robotSpeed);
+
+    // SerialBT.print(encoder.getCount());
+    // SerialBT.print(" || ");
+    // SerialBT.println(encoder2.getCount());
+
+    mapDataList.push_back(Map_Data(encoder.getCount(), encoder2.getCount(), (encoder.getCount()+encoder2.getCount())/2));
+  break;
+
+  case '6': //Put the Map_Data from flash memory to RAM
+  static bool firstTimeOnFlashToRAM = true;
+  if(firstTimeOnFlashToRAM == true)
+  {
+    readFile("/Map_Data.txt");
+    firstTimeOnFlashToRAM = false;
+  }
+  break;
+
+  case '7':
+    static bool firstTimeOnBrushless = true;
+    if(firstTimeOnBrushless == true)
     {
-       for(int i=1; i<PROPELLER_PWM; i++)
+      for(int i=1; i<BRUSHLESSSPEED; i++)
       {
-        analogWrite(PROPELLER_PIN,i);
-        delay(10);
+        Brushless.write(i);
+        delay(25);
       }
-      firstTimeOnPropeller = false;
+      firstTimeOnBrushless = false;
     }
-    analogWrite(PROPELLER_PIN,PROPELLER_PWM);
+    Brushless.write(BRUSHLESSSPEED);
+  break;
+
+  case '8': //Tratamento
+    static bool firstTimeProcess = true;
+    tratamento();
+    encoder.clearCount();
+    encoder2.clearCount();
+    if(firstTimeProcess == true)
+    {
+      for(int i = 0; i < mapDataList.size(); i++)
+      {
+        if(mapDataList[i].curve == 1)
+        {
+          mapDataList[i].meanEncoderCount = mapDataList[i].meanEncoderCount + ACCELERATION_OFFSET;
+        }
+        if (i == 0)
+        {
+          string meanEncoderCount = to_string(mapDataList[i].meanEncoderCount);
+          string curve = to_string(mapDataList[i].curve);
+          string curveSpeed = to_string(mapDataList[i].curveSpeed);
+          string accelerationCount = to_string(mapDataList[i].accelerationCount);
+          string desaccelerationCount = to_string(mapDataList[i].desaccelerationCount);
+
+          string dataString = meanEncoderCount + "," + curve + "," + curveSpeed + "," + accelerationCount + "," + desaccelerationCount + "\n";
+          writeFile("/Map_Data.txt", dataString.c_str());
+        }
+        else
+        {
+          string meanEncoderCount = to_string(mapDataList[i].meanEncoderCount);
+          string curve = to_string(mapDataList[i].curve);
+          string curveSpeed = to_string(mapDataList[i].curveSpeed);
+          string accelerationCount = to_string(mapDataList[i].accelerationCount);
+          string desaccelerationCount = to_string(mapDataList[i].desaccelerationCount);
+
+          string dataString = meanEncoderCount + "," + curve + "," + curveSpeed + "," + accelerationCount + "," + desaccelerationCount + "\n";
+          appendFile("/Map_Data.txt", dataString.c_str());
+        }
+      }
+      firstTimeProcess = false;
+    }    
+    status = '3';
+    lastReceivedChar = '3';
   break;
 
   default:
-    analogWrite(PWM_LEFT,0);
-    analogWrite(PWM_RIGHT,0);
-    analogWrite(PROPELLER_PIN, 0);
+    analogWrite(in_dir1,255);
+    analogWrite(in_dir2,255);
+
+    analogWrite(in_esq1,255);
+    analogWrite(in_esq2,255);
+
+    Brushless.write(0);
   break;
   }
 }
@@ -409,8 +833,7 @@ void setup()
   pinMode(led, OUTPUT);
   pinMode(s_lat_esq, INPUT);
   pinMode(s_lat_dir, INPUT);
-  pinMode(buzzer, OUTPUT);
-  pinMode(PROPELLER_PIN, OUTPUT);
+  pinMode(BRUSHLESS_PIN, OUTPUT);
   pinMode(boot, INPUT);
 
   led_stip.begin();
@@ -421,10 +844,19 @@ void setup()
   encoder.attachFullQuad(enc_eq_A, enc_eq_B);
   encoder2.attachFullQuad(enc_dir_B, enc_dir_A);
 
-  digitalWrite(stby, HIGH);
-
   encoder.clearCount();
   encoder2.clearCount();
+
+  Brushless.attach(BRUSHLESS_PIN, 1000, 2000);
+
+  Brushless.write(180);
+  delay(5000);
+  Brushless.write(0);
+
+  if(!SPIFFS.begin(true)){
+        SerialBT.println("SPIFFS Mount Failed");
+        return;
+  }
 
   sArray.setTypeMCP3008();
   sArray.setSensorPins((const uint8_t[]){0, 1, 2, 3, 4, 5, 6, 7}, 8, (gpio_num_t)out_s_front, (gpio_num_t)in_s_front, (gpio_num_t)clk, (gpio_num_t)cs_s_front, 1350000, VSPI_HOST);
@@ -451,9 +883,8 @@ void setup()
   encoder.clearCount();
   encoder2.clearCount();
 
-  //xTaskCreatePinnedToCore(ler_sens_lat_esq,"Sensor lat esq",4000,NULL,1,NULL,0);
-  //xTaskCreatePinnedToCore(ler_sens_lat_dir,"Sensor lat dir",4000,NULL,1,NULL,0);
-  xTaskCreatePinnedToCore(ler_laterais,"Sensores Laterais",4000,NULL,1,NULL,0);
+  xTaskCreatePinnedToCore(calculateRobotSpeed,"Velocidade",10000,NULL,1,NULL,1);
+  //xTaskCreatePinnedToCore(ler_laterais,"Sensores Laterais",4000,NULL,1,NULL,0);
 }
 
 void loop()
@@ -461,15 +892,8 @@ void loop()
   bluetoothRead();
 
   callRobotTask(lastReceivedChar);
-
-  // digitalWrite(in_dir1,LOW);
-  // digitalWrite(in_dir2,HIGH);
-  // analogWrite(PWM_RIGHT,200);
-
-  // digitalWrite(in_esq1,LOW);
-  // digitalWrite(in_esq2,HIGH);
-  // analogWrite(PWM_LEFT,190);
-
-  // calcula_PID_rot(KpParamRot,KdParamRot,KiParamRot);
-  // controle_motores(140);
+  // SerialBT.print(encoder.getCount());
+  // SerialBT.print(" || ");
+  // SerialBT.println(encoder2.getCount());
+  // SerialBT.println(robotSpeed);
 }
