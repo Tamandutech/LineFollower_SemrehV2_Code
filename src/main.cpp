@@ -5,6 +5,9 @@
 #include <Adafruit_NeoPixel.h>
 #include <BluetoothSerial.h>
 #include <ESP32Servo.h>
+#include <Adafruit_MPU6050.h>
+#include <Adafruit_Sensor.h>
+#include <Wire.h>
 
 #include <cmath>
 #include <vector>
@@ -12,7 +15,6 @@
 // #include "FS.h"
 // #include <LittleFS.h>
 #include <string>
-#include <iostream>
 #include <fstream>
 #include "SPIFFS.h"
 
@@ -54,6 +56,8 @@ ESP32Encoder encoder2;
 QTRSensors sArray;
 BluetoothSerial SerialBT;
 Adafruit_NeoPixel led_stip(LED_COUNT, led, NEO_GRB + NEO_KHZ800); // Declare our NeoPixel strip object
+Adafruit_MPU6050 mpu6050;
+TwoWire I2CMPU6050 = TwoWire(0);
 
 const uint32_t R = led_stip.Color(255,0,0);
 const uint32_t G = led_stip.Color(0,255,0);
@@ -837,6 +841,7 @@ void setup()
   pinMode(boot, INPUT);
 
   led_stip.begin();
+  I2CMPU6050.begin(I2C_SDA, I2C_SCL, 100000);
   SerialBT.begin("Semreh"); //Bluetooth device name
 
   ESP32Encoder::useInternalWeakPullResistors = UP;
@@ -857,10 +862,13 @@ void setup()
         SerialBT.println("SPIFFS Mount Failed");
         return;
   }
+  if (!mpu6050.begin(0x68, &I2CMPU6050)) {
+    Serial.println("Failed to find MPU6050 chip");
+  }
 
   sArray.setTypeMCP3008();
   sArray.setSensorPins((const uint8_t[]){0, 1, 2, 3, 4, 5, 6, 7}, 8, (gpio_num_t)out_s_front, (gpio_num_t)in_s_front, (gpio_num_t)clk, (gpio_num_t)cs_s_front, 1350000, VSPI_HOST);
-  sArray.setSamplesPerSensor(5); // VERIFICARRR
+  sArray.setSamplesPerSensor(5);
 
   for (int i = 0; i < 200; i++)
   {

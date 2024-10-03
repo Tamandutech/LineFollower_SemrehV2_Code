@@ -134,3 +134,6 @@ float acceleration = 15.0f;
 #define FORMAT_LITTLEFS_IF_FAILED true
 
 #define ACCELERATION_OFFSET 350
+
+#define I2C_SDA 13
+#define I2C_SCL 14
