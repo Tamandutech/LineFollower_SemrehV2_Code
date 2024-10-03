@@ -1,7 +1,0 @@
-{
-    "files.associations": {
-        "random": "cpp"
-    },
-    "idf.portWin": "COM13",
-    "idf.flashType": "UART"
-}
