@@ -428,6 +428,7 @@ void calculateRobotSpeed(void *parameter) //m/s
   }
 }
 
+
 void tratamento()
 {
   if(!mapDataList.empty()) //verifica se a lista não está vazia
@@ -589,7 +590,26 @@ void bluetoothRead()
     lastReceivedChar = incomingChar;
   }
 }
-
+uint32_t battery_adc = 0;
+uint8_t brushless_Speed = 160;
+TaskHandle_t BrushlessSpeedHandle = NULL;
+void calculateBrushlessSpeed(void *parameter)
+{
+  TickType_t xLastWakeTime = xTaskGetTickCount();
+  while(true)
+  {
+    for (int i = 0; i < 500; i++)
+    {
+        battery_adc += analogRead(battery);
+    }
+    battery_adc /= 500; // Média de 500 leituras
+    brushless_Speed = (brushless_Speed/160)*300000/battery_adc;
+    Brushless.write(brushless_Speed);
+    SerialBT.println(brushless_Speed);
+    SerialBT.println(battery_adc);
+    vTaskDelayUntil(&xLastWakeTime,pdMS_TO_TICKS(1000));  // Pausa de 1s entre as verificações
+  }
+}
 void callRobotTask(char status)
 {
   switch(status)
@@ -699,7 +719,10 @@ void callRobotTask(char status)
     analogWrite(in_esq1,255);
     analogWrite(in_esq2,255);
 
+    vTaskDelete(BrushlessSpeedHandle);
+    BrushlessSpeedHandle = NULL;
     Brushless.write(0);
+
   break;
 
   case '4': //Safe
@@ -740,14 +763,15 @@ void callRobotTask(char status)
     static bool firstTimeOnBrushless = true;
     if(firstTimeOnBrushless == true)
     {
-      for(int i=1; i<BRUSHLESSSPEED; i++)
+      for(int i=1; i<brushless_Speed; i++)
       {
         Brushless.write(i);
         delay(25);
       }
       firstTimeOnBrushless = false;
+      xTaskCreatePinnedToCore(calculateBrushlessSpeed,"BrushlessSpeed",4000,NULL,1,&BrushlessSpeedHandle,0);
     }
-    Brushless.write(BRUSHLESSSPEED);
+    
   break;
 
   case '8': //Tratamento
@@ -825,8 +849,6 @@ long int calculate_rpm_dir(){
 
 void setup()
 {
-  Serial.begin(115200);
-
   pinMode(in_esq1, OUTPUT);
   pinMode(in_esq2, OUTPUT);
   pinMode(in_dir1, OUTPUT);
@@ -839,7 +861,9 @@ void setup()
   pinMode(s_lat_dir, INPUT);
   pinMode(BRUSHLESS_PIN, OUTPUT);
   pinMode(boot, INPUT);
+  pinMode(battery, INPUT);
 
+  Serial.begin(115200);
   led_stip.begin();
   I2CMPU6050.begin(I2C_SDA, I2C_SCL, 100000);
   SerialBT.begin("Semreh"); //Bluetooth device name

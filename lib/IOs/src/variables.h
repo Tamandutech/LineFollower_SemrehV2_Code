@@ -39,6 +39,13 @@
 //Numero de LEDs NeoPixels na placa
 #define LED_COUNT 2 // Numero de LEDs
 
+//Pinos I2C do MPU6050
+#define I2C_SDA 13 //SDA do MPU6050
+#define I2C_SCL 14 //SCL do MPU6050
+
+//Monitoramento da bateria
+#define battery 36 // Pino de monitoramento da bateria
+
 //Valores para os motores
 int leftEncoderPulse = 0;
 int rightEncoderPulse = 0;
@@ -134,6 +141,3 @@ float acceleration = 15.0f;
 #define FORMAT_LITTLEFS_IF_FAILED true
 
 #define ACCELERATION_OFFSET 350
-
-#define I2C_SDA 13
-#define I2C_SCL 14
