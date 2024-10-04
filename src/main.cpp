@@ -591,7 +591,9 @@ void bluetoothRead()
   }
 }
 uint32_t battery_adc = 0;
-uint8_t brushless_Speed = 160;
+float brushless_Speed = 145;
+uint8_t brushless_Speed_target = 145;
+
 TaskHandle_t BrushlessSpeedHandle = NULL;
 void calculateBrushlessSpeed(void *parameter)
 {
@@ -603,7 +605,7 @@ void calculateBrushlessSpeed(void *parameter)
         battery_adc += analogRead(battery);
     }
     battery_adc /= 500; // Média de 500 leituras
-    brushless_Speed = (brushless_Speed/160)*300000/battery_adc;
+    brushless_Speed = (brushless_Speed_target/155)*300000/battery_adc;
     Brushless.write(brushless_Speed);
     SerialBT.println(brushless_Speed);
     SerialBT.println(battery_adc);
@@ -718,9 +720,11 @@ void callRobotTask(char status)
 
     analogWrite(in_esq1,255);
     analogWrite(in_esq2,255);
-
-    vTaskDelete(BrushlessSpeedHandle);
-    BrushlessSpeedHandle = NULL;
+    if (BrushlessSpeedHandle != NULL)
+    {
+      vTaskDelete(BrushlessSpeedHandle);
+      BrushlessSpeedHandle = NULL;
+    }
     Brushless.write(0);
 
   break;
