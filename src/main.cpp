@@ -673,10 +673,10 @@ void calculateBrushlessSpeed(void *parameter)
         battery_adc += analogRead(battery);
     }
     battery_adc /= 500; // Média de 500 leituras
-    brushless_Speed = (brushless_Speed_target/155)*220000/battery_adc;
+    brushless_Speed = (brushless_Speed_target/155)*230000/battery_adc;
     Brushless.write(brushless_Speed);
-    SerialBT.println(brushless_Speed);
-    SerialBT.println(battery_adc *3.3/4096  *102/12);
+    // SerialBT.println(brushless_Speed);
+    // SerialBT.println(battery_adc *3.3/4096  *102/12);
     vTaskDelayUntil(&xLastWakeTime,pdMS_TO_TICKS(1000));  // Pausa de 1s entre as verificações
   }
 }
@@ -734,7 +734,7 @@ void callRobotTask(char status)
           {
             ler_sensores();
             calcula_PID(Kp,Kd);
-            calcula_PID_translacional(KpTrans, KdTrans, KiTrans,(mapDataList[i].curveSpeed));
+            calcula_PID_translacional(KpTrans, KdTrans, KiTrans, (mapDataList[i].curveSpeed));
             motorControl();
             led_stip.setPixelColor(0,255,255,255);
             led_stip.show();
@@ -826,7 +826,7 @@ void callRobotTask(char status)
   static bool firstTimeOnFlashToRAM = true;
   if(firstTimeOnFlashToRAM == true)
   {
-    readFile("/Map_Data.txt");
+    readFile("/Map_Data_Original.txt");
     firstTimeOnFlashToRAM = false;
   }
   break;
@@ -868,7 +868,7 @@ void callRobotTask(char status)
           string desaccelerationCount = to_string(mapDataList[i].desaccelerationCount);
 
           string dataString = meanEncoderCount + "," + curve + "," + curveSpeed + "," + accelerationCount + "," + desaccelerationCount + "\n";
-          writeFile("/Map_Data.txt", dataString.c_str());
+          writeFile("/Map_Data_Sensor.txt", dataString.c_str());
         }
         else
         {
@@ -879,7 +879,7 @@ void callRobotTask(char status)
           string desaccelerationCount = to_string(mapDataList[i].desaccelerationCount);
 
           string dataString = meanEncoderCount + "," + curve + "," + curveSpeed + "," + accelerationCount + "," + desaccelerationCount + "\n";
-          appendFile("/Map_Data.txt", dataString.c_str());
+          appendFile("/Map_Data_Sensor.txt", dataString.c_str());
         }
       }
       firstTimeProcess = false;
@@ -895,7 +895,7 @@ void callRobotTask(char status)
     analogWrite(in_esq1,255);
     analogWrite(in_esq2,255);
 
-    Brushless.write(0);
+    // Brushless.write(0);
   break;
   }
 }
