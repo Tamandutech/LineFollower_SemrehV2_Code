@@ -414,6 +414,74 @@ void ler_laterais(void *parameter){
   }
 }
 
+bool accumLateralEsq_Digital[3];
+bool accumLateralDir_Digital[3];
+uint8_t medLateralDir_Digital = 0;
+uint8_t medLateralEsq_Digital = 0;
+uint8_t capacete_esq = 34;
+uint8_t capacete_dir = 17;
+TaskHandle_t blinkLedHandle = NULL;
+
+void blinkLed(void *parameter)
+{
+  while(true)
+  {
+    led_stip.setPixelColor(1, 0, 0, 255);
+    led_stip.show();
+    vTaskDelay(pdMS_TO_TICKS(20));  // Manter o led ligado por 20ms
+    led_stip.setPixelColor(1, 0, 0, 0);
+    led_stip.show();
+    vTaskDelete(blinkLedHandle);
+  }
+}
+
+void ler_laterais_digital(void *parameter){
+  static bool readingWhiteLeft;
+  static bool readingWhiteRight; // variável para que a marcação seja lida apenas uma vez
+  static bool firstTimeRight = false; // variável para evitar leitura de lateral direito no meio da pista
+  while(true)
+  {
+    accumLateralEsq_Digital[countLateral] += digitalRead(capacete_esq);
+    accumLateralDir_Digital[countLateral] += digitalRead(capacete_dir);
+    countLateral++;
+
+    for (int i=0; i<MED_TAMANHO; i++) 
+    {
+      medLateralDir_Digital+= accumLateralDir[i];
+      medLateralEsq_Digital+= accumLateralEsq[i];
+    }
+    
+    if(medLateralEsq_Digital < 2 || medLateralDir_Digital < 2) //lê marcação esquerdo ou direito esq3100 dir3700
+    {
+      if(medLateralEsq_Digital < 2 && medLateralDir_Digital >= 2 && readingWhiteLeft == false) //lê apenas marcação esquerda
+      {
+        xTaskCreatePinnedToCore(blinkLed,"blinkLed",1000,NULL,1,&blinkLedHandle,0);        
+        readingWhiteLeft = true;
+        mapDataList.push_back(Map_Data(encoder.getCount(), encoder2.getCount(), (encoder.getCount()+encoder2.getCount())/2));
+
+      }
+
+      else if(medLateralEsq_Digital >= 2 && medLateralDir_Digital < 2 && readingWhiteRight == false && firstTimeRight == false) //lê apenas marcação direita
+      {
+        SerialBT.println("INICIO/FIM");
+        firstTimeRight = true;
+        readingWhiteRight = true;
+      }
+    }
+
+    else
+    {
+      readingWhiteLeft = false;
+      readingWhiteRight = false;
+    }
+    medLateralDir_Digital = 0;
+    medLateralEsq_Digital = 0;
+
+    countLateral = countLateral % MED_TAMANHO;
+    vTaskDelay(pdMS_TO_TICKS(8));  // Pausa de 5ms entre as verificações
+  }
+}
+
 void calculateRobotSpeed(void *parameter) //m/s
 {
   TickType_t xLastWakeTime = xTaskGetTickCount();
@@ -592,7 +660,7 @@ void bluetoothRead()
 }
 uint32_t battery_adc = 0;
 float brushless_Speed = 145;
-uint8_t brushless_Speed_target = 145;
+float brushless_Speed_target = 145;
 
 TaskHandle_t BrushlessSpeedHandle = NULL;
 void calculateBrushlessSpeed(void *parameter)
@@ -605,10 +673,10 @@ void calculateBrushlessSpeed(void *parameter)
         battery_adc += analogRead(battery);
     }
     battery_adc /= 500; // Média de 500 leituras
-    brushless_Speed = (brushless_Speed_target/155)*300000/battery_adc;
+    brushless_Speed = (brushless_Speed_target/155)*220000/battery_adc;
     Brushless.write(brushless_Speed);
     SerialBT.println(brushless_Speed);
-    SerialBT.println(battery_adc);
+    SerialBT.println(battery_adc *3.3/4096  *102/12);
     vTaskDelayUntil(&xLastWakeTime,pdMS_TO_TICKS(1000));  // Pausa de 1s entre as verificações
   }
 }
