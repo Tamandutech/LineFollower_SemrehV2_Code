@@ -119,25 +119,35 @@ void readFile(const char * path){
     if (dataString.length() > 0) {
       // Separa as informações em um vetor de strings
       int commaIndex = dataString.indexOf(',');
-      String meanEncoderCount = dataString.substring(0, commaIndex);
+      String leftEncoderCount = dataString.substring(0, commaIndex);
 
       int secondCommaIndex = dataString.indexOf(',', commaIndex + 1);
-      String stringCurve = dataString.substring(commaIndex + 1, secondCommaIndex);
+      String rightEncoderCount = dataString.substring(commaIndex + 1, secondCommaIndex);
 
       int thirdCommaIndex = dataString.indexOf(',', secondCommaIndex + 1);
-      String curveSpeed = dataString.substring(secondCommaIndex + 1, thirdCommaIndex);
+      String meanEncoderCount = dataString.substring(secondCommaIndex + 1, thirdCommaIndex);
 
       int fourthCommaIndex = dataString.indexOf(',', thirdCommaIndex + 1);
-      String accelerationCount = dataString.substring(thirdCommaIndex + 1, fourthCommaIndex);
-
-      String desaccelerationCount = dataString.substring(fourthCommaIndex + 1);
+      String stringCurve = dataString.substring(thirdCommaIndex + 1, fourthCommaIndex);
       
+      int fifthCommaIndex = dataString.indexOf(',', fourthCommaIndex + 1);
+      String curveSpeed = dataString.substring(fourthCommaIndex + 1, fifthCommaIndex);
+      
+      int sixthCommaIndex = dataString.indexOf(',', fifthCommaIndex + 1);
+      String accelerationCount = dataString.substring(fifthCommaIndex + 1, sixthCommaIndex);
+
+      String desaccelerationCount = dataString.substring(sixthCommaIndex + 1);
+
+      float lleftEncoderCount = atof(leftEncoderCount.c_str());
+      float lrightEncoderCount = atof(rightEncoderCount.c_str());
       float lmeanEncoderCount = atof(meanEncoderCount.c_str());
       float lcurveSpeed = atof(curveSpeed.c_str());
       float laccelerationCount = atof(accelerationCount.c_str());
       float ldesaccelerationCount = atof(desaccelerationCount.c_str());
       int curve = atoi(stringCurve.c_str());
 
+      SerialBT.print(lleftEncoderCount);
+      SerialBT.print(lrightEncoderCount);
       SerialBT.print(lmeanEncoderCount);
       SerialBT.print(",");
       SerialBT.print(curve);
@@ -149,7 +159,7 @@ void readFile(const char * path){
       SerialBT.println(ldesaccelerationCount);
       
       
-      mapDataList.push_back(Map_Data(0.0f, 0.0f, lmeanEncoderCount, 0.0f,0.0f,0.0f,lcurveSpeed,0.0f,curve,0.0f,0.0f,laccelerationCount,ldesaccelerationCount));
+      mapDataList.push_back(Map_Data(lleftEncoderCount, lrightEncoderCount, lmeanEncoderCount, 0.0f,0.0f,0.0f,lcurveSpeed,0.0f,curve,0.0f,0.0f,laccelerationCount,ldesaccelerationCount));
     }
   }
   SerialBT.println("Terminei de passar os dados pra RAM");
@@ -245,14 +255,13 @@ void calcula_PID_rot(float KpParamRot , float KdParamRot , float KiParamRot){
 
 float curva_acel(float pwm_goal)
 {
-
   if (pwm_goal > last_pwm)
   {
     run_pwm = pwm_goal;
   }
   else if (pwm_goal < last_pwm)
   {
-    last_pwm -= 0.02f;
+    last_pwm -= 0.015f;
     run_pwm = pwm_goal;
   }
   else
@@ -861,25 +870,29 @@ void callRobotTask(char status)
         }
         if (i == 0)
         {
+          string leftEncoderCount = to_string(mapDataList[i].leftEncoderCount);
+          string rightEncoderCount = to_string(mapDataList[i].rightEncoderCount);
           string meanEncoderCount = to_string(mapDataList[i].meanEncoderCount);
           string curve = to_string(mapDataList[i].curve);
           string curveSpeed = to_string(mapDataList[i].curveSpeed);
           string accelerationCount = to_string(mapDataList[i].accelerationCount);
           string desaccelerationCount = to_string(mapDataList[i].desaccelerationCount);
 
-          string dataString = meanEncoderCount + "," + curve + "," + curveSpeed + "," + accelerationCount + "," + desaccelerationCount + "\n";
-          writeFile("/Map_Data_Sensor.txt", dataString.c_str());
+          string dataString = leftEncoderCount + "," + rightEncoderCount + "," + meanEncoderCount + "," + curve + "," + curveSpeed + "," + accelerationCount + "," + desaccelerationCount + "\n";
+          writeFile("/Map_Data_Original.txt", dataString.c_str());
         }
         else
         {
+          string leftEncoderCount = to_string(mapDataList[i].leftEncoderCount);
+          string rightEncoderCount = to_string(mapDataList[i].rightEncoderCount);
           string meanEncoderCount = to_string(mapDataList[i].meanEncoderCount);
           string curve = to_string(mapDataList[i].curve);
           string curveSpeed = to_string(mapDataList[i].curveSpeed);
           string accelerationCount = to_string(mapDataList[i].accelerationCount);
           string desaccelerationCount = to_string(mapDataList[i].desaccelerationCount);
 
-          string dataString = meanEncoderCount + "," + curve + "," + curveSpeed + "," + accelerationCount + "," + desaccelerationCount + "\n";
-          appendFile("/Map_Data_Sensor.txt", dataString.c_str());
+          string dataString = leftEncoderCount + "," + rightEncoderCount + "," + meanEncoderCount + "," + curve + "," + curveSpeed + "," + accelerationCount + "," + desaccelerationCount + "\n";
+          appendFile("/Map_Data_Original.txt", dataString.c_str());
         }
       }
       firstTimeProcess = false;

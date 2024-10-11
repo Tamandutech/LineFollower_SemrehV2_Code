@@ -132,9 +132,9 @@ float DISTANCEWHEELTOCENTER = 0.126f;
 float GRAVITY = 9.8f;
 float FRICTION = 0.577f;
 //#define desaceleracao 5
-float MASS = 0.172f;
-float BRUSHLESSFORCE = 3.0f;
-float MAXSPEED = 4.0f;
+float MASS = 0.178f;
+float BRUSHLESSFORCE = 3.92f;
+float MAXSPEED = 5.0f;
 float MAXSPEED2 = 4.5f;
 float acceleration = 15.0f;
 
