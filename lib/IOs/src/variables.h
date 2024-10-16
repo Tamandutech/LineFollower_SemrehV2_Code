@@ -51,46 +51,39 @@ int leftEncoderPulse = 0;
 int rightEncoderPulse = 0;
 int leftDistanceTravelled = 0;
 int rightDistanceTravelled = 0;
-float robotSpeed = 0;
-float last_pwm = 0;
-float run_pwm;
-float translacionalError;
-float lastTranslacionalError;
-float P_Translacional = 0;
-float D_Translacional = 0;
-float I_Translacional = 0;
-float PIDTranslacional = 0;
-
-float rotacionalError;
-float lastRotacionalError;
-#define MAX_PWM 255
-
-#define HIGHSPEED_PWM 130
-
-#define MAPPING_PWM 180
-
-#define PROPELLER_PWM 200
+float leftMotorSpeed = 0;
+float rightMotorSpeed = 0;
+float lastSpeed = 0;
+float runSpeed;
+float leftSpeedError;
+float rightSpeedError;
+float lastLeftSpeedError;
+float lastRightSpeedError;
+float P_LeftSpeed = 0;
+float D_LeftSpeed = 0;
+float I_LeftSpeed = 0;
+float leftSpeedPID = 0;
+float P_RightSpeed = 0;
+float D_RightSpeed = 0;
+float I_RightSpeed = 0;
+float rightSpeedPID = 0;
 
 #define BRUSHLESSSPEED 145   //100graus = 235g   125graus = 300g    150graus = 385g
 #define BRUSHLESSSPEED2 165
 
 //Valores do PID
-float Kp = 0.0123; // 0.074  M120 Curva
-float Kd = 0.15; //  0.48   M120 Curva
+float KpLine = 0.0123; // 0.074  M120 Curva
+float KdLine = 0.15; //  0.48   M120 Curva
 
 float KpR = 0.05; // M255
 float KdR = 0.15; //  M255
 
-float P = 0, D = 0; // Valores de ganho do PID
-float PID = 0; // Valor do ganho do PID total
+float P_Line = 0, D_Line = 0; // Valores de ganho do PID
+float LinePID = 0; // Valor do ganho do PID total
 
-float KpTrans = 1;
-float KdTrans = 20;
-float KiTrans = 4.6;
-
-float KpRot=7;
-float KdRot=0;
-float KiRot=10;
+float KpSpeed = 1;
+float KdSpeed = 20;
+float KiSpeed = 4.6;
 
 //Valores para leitura do sensores laterais
 #define DEBOUNCETIME 200
@@ -103,26 +96,16 @@ float accumLateralDir[MED_TAMANHO] = {};
 float accumLateralEsq[MED_TAMANHO] = {};
 
 float velesq = 0, veldir = 0; // Valor de PWM do motor
-float velesqrot = 0, veldirrot = 0;
 float velesqTranslacional = 0, veldirTranslacional = 0;
-float erro_sensores = 0; // Erro dos sensores (-3500 < x < 3500)
-float erro_anterior = 0; // Erro anterior dos sensores (-3500 < x < 3500)
-float erro_f = 0; // Erro dos sensores (-3500 < x < 3500)
-
-
+float arraySensorError = 0; // Erro dos sensores (-3500 < x < 3500)
+float lastLineError = 0; // Erro anterior dos sensores (-3500 < x < 3500)
+float lineError = 0; // Erro dos sensores (-3500 < x < 3500)
 
 //variáveis globais controle rotacional
 long int enc_esq_pul = 0;
 long int enc_dir_pul = 0;
 long int pul_prev_esq = 0;
 long int pul_prev_dir = 0;
-
-float erro_f_rot = 0;
-float erro_anterior_rot = 0;
-float P_rot = 0 ;
-float D_rot = 0;
-float I_rot = 0;
-float PIDrot = 0;
 
 float MM_PER_COUNT = 0.576f;
 #define SAMPLING_TIME 10
