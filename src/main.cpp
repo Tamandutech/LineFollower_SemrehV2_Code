@@ -144,7 +144,9 @@ void readFile(const char * path){
       int curve = atoi(stringCurve.c_str());
 
       SerialBT.print(lleftEncoderCount);
+      SerialBT.print(",");
       SerialBT.print(lrightEncoderCount);
+      SerialBT.print(",");
       SerialBT.print(lmeanEncoderCount);
       SerialBT.print(",");
       SerialBT.print(curve);
