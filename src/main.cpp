@@ -265,6 +265,42 @@ void CalculateRightSpeedPID(float KpParam_Translacional, float KdParam_Translaci
   lastRightSpeedError = rightSpeedError;
 }
 
+void CheckIfCurve(void *parameter)
+{
+  static bool readingCurve = false;
+  TickType_t xLastWakeTime = xTaskGetTickCount();
+  while(true)
+  {
+    leftEncoderPulse = encoder.getCount();
+    rightEncoderPulse = encoder2.getCount();
+    vTaskDelayUntil(&xLastWakeTime,pdMS_TO_TICKS(100));  // Pausa de 100ms entre as verificações
+    leftDistanceTravelled = encoder.getCount() - leftEncoderPulse;
+    rightDistanceTravelled = encoder2.getCount() - rightEncoderPulse;
+    float leftDistanceTravelledMeter = (MM_PER_COUNT * leftDistanceTravelled)/1000;
+    float rightDistanceTravelledMeter = (MM_PER_COUNT * rightDistanceTravelled)/1000;
+    
+    float CurveRadius = abs((DISTANCEWHEELTOCENTER/2) * ((leftEncoderDeltaMeter+rightEncoderDeltaMeter)/(leftEncoderDeltaMeter-rightEncoderDeltaMeter)));
+    if(CurveRadius <= 0.5 && readingCurve == false)
+    {
+      mapDataList.push_back(Map_Data(encoder.getCount(), encoder2.getCount(), (encoder.getCount()+encoder2.getCount())/2));
+      readingCurve = true;
+    }
+    else if(CurveRadius <= 0.5 && readingCurve == true)
+    {
+      //nada
+    }
+    else if(CurveRadius > 0.5 && readingCurve == true)
+    {
+      mapDataList.push_back(Map_Data(encoder.getCount(), encoder2.getCount(), (encoder.getCount()+encoder2.getCount())/2));
+      readingCurve = false;
+    }
+    else if(CurveRadius > 0.5 && readingCurve == false)
+    {
+      //nada
+    }
+  }
+}
+
 void MotorControl()
 {
   leftMotorSpeed = leftSpeedPID + LinePID;
