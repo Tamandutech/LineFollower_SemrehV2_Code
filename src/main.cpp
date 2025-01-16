@@ -906,6 +906,7 @@ void setup()
 
   xTaskCreatePinnedToCore(CalculateLeftSpeed,"Left Motor Speed",10000,NULL,1,NULL,1);
   xTaskCreatePinnedToCore(CalculateRightSpeed,"Right Motor Speed",10000,NULL,1,NULL,1);
+  xTaskCreatePinnedToCore(CheckIfCurve, "Create a marking", 10000, NULL, 1, NULL, 1);
   //xTaskCreatePinnedToCore(ler_laterais,"Sensores Laterais",4000,NULL,1,NULL,0);
 }
 
