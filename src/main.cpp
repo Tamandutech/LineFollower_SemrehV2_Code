@@ -279,7 +279,7 @@ void CheckIfCurve(void *parameter)
     float leftDistanceTravelledMeter = (MM_PER_COUNT * leftDistanceTravelled)/1000;
     float rightDistanceTravelledMeter = (MM_PER_COUNT * rightDistanceTravelled)/1000;
     
-    float CurveRadius = abs((DISTANCEWHEELTOCENTER/2) * ((leftEncoderDeltaMeter+rightEncoderDeltaMeter)/(leftEncoderDeltaMeter-rightEncoderDeltaMeter)));
+    float CurveRadius = abs((DISTANCEWHEELTOCENTER/2) * ((leftDistanceTravelledMeter+rightDistanceTravelledMeter)/(leftDistanceTravelledMeter-rightDistanceTravelledMeter)));
     if(CurveRadius <= 0.5 && readingCurve == false)
     {
       mapDataList.push_back(Map_Data(encoder.getCount(), encoder2.getCount(), (encoder.getCount()+encoder2.getCount())/2));
@@ -742,7 +742,7 @@ void callRobotTask(char status)
   static bool firstTimeOnFlashToRAM4 = true;
   if(firstTimeOnFlashToRAM4 == true)
   {
-    readFile("/SafeSabado.txt");
+    readFile("/Map_Data_Sensor.txt");
     firstTimeOnFlashToRAM4 = false;
   }
   break;
@@ -758,7 +758,7 @@ void callRobotTask(char status)
   static bool firstTimeOnFlashToRAM = true;
   if(firstTimeOnFlashToRAM == true)
   {
-    readFile("/Map_Data_Original.txt");
+    readFile("/Map_Data.txt");
     firstTimeOnFlashToRAM = false;
   }
   break;
@@ -825,11 +825,11 @@ void callRobotTask(char status)
   break;
 
   default:
-    analogWrite(in_dir1,255);
-    analogWrite(in_dir2,255);
+    // analogWrite(in_dir1,255);
+    // analogWrite(in_dir2,255);
 
-    analogWrite(in_esq1,255);
-    analogWrite(in_esq2,255);
+    // analogWrite(in_esq1,255);
+    // analogWrite(in_esq2,255);
 
     // Brushless.write(0);
   break;
