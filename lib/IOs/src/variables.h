@@ -53,6 +53,8 @@ int leftDistanceTravelled = 0;
 int rightDistanceTravelled = 0;
 float leftMotorSpeed = 0;
 float rightMotorSpeed = 0;
+float leftMotorSpeedMS = 0;
+float rightMotorSpeedMS = 0;
 float lastSpeed = 0;
 float runSpeed;
 float leftSpeedError;
@@ -70,6 +72,8 @@ float rightSpeedPID = 0;
 
 #define BRUSHLESSSPEED 145   //100graus = 235g   125graus = 300g    150graus = 385g
 #define BRUSHLESSSPEED2 165
+
+#define MAX_PWM 255
 
 //Valores do PID
 float KpLine = 0.0123; // 0.074  M120 Curva
