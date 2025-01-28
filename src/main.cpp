@@ -319,10 +319,77 @@ void CheckIfCurve(void *parameter)
   }
 }
 
+void calculateRobotSpeed(void *parameter) //m/s
+{
+  TickType_t xLastWakeTime = xTaskGetTickCount();
+  while(true)
+  {
+    leftEncoderPulse = encoder.getCount();
+    rightEncoderPulse = encoder2.getCount();
+    vTaskDelayUntil(&xLastWakeTime,pdMS_TO_TICKS(SAMPLING_TIME));  // Pausa de 10ms entre as verificações
+    leftDistanceTravelled = encoder.getCount() - leftEncoderPulse;
+    rightDistanceTravelled = encoder2.getCount() - rightEncoderPulse;
+    robotSpeed = ((leftDistanceTravelled + rightDistanceTravelled)/2)* MM_PER_COUNT / SAMPLING_TIME; //m/s
+  }
+}
+
+float translacionalErrorBuffer[9]; // buffer to store the last 5 values of translationalError
+int translacionalErrorIndex = 0; // index to keep track of the current position in the buffer
+void CalculateSpeedPID(float KpParam_Translacional, float KdParam_Translacional,float KiParam_Translacional, float desiredSpeed)
+{
+  translacionalError = AccelerationCurve(desiredSpeed) - robotSpeed;
+  P_Translacional = translacionalError;
+  D_Translacional = translacionalError - lastTranslacionalError;
+
+  // update the buffer and calculate the sum of the last 5 values
+  translacionalErrorBuffer[translacionalErrorIndex] = translacionalError;
+  translacionalErrorIndex = (translacionalErrorIndex + 1) % 9;
+  float sum = 0;
+  for (int i = 0; i < 9; i++) {
+    sum += translacionalErrorBuffer[i];
+  }
+  I_Translacional = sum;
+
+  PIDTranslacional = (KpParam_Translacional * P_Translacional) + (KdParam_Translacional * D_Translacional) + (KiParam_Translacional * I_Translacional);
+  lastTranslacionalError = translacionalError;
+}
+
 void MotorControl()
 {
   leftMotorSpeed = leftSpeedPID + LinePID;
   rightMotorSpeed = rightSpeedPID - LinePID;
+
+  if(rightMotorSpeed >= 0)
+  {
+    if(rightMotorSpeed > MAX_PWM) rightMotorSpeed = MAX_PWM;
+    analogWrite(in_dir1,LOW);
+    analogWrite(in_dir2,rightMotorSpeed);
+  }
+  else
+  {
+    rightMotorSpeed = (-1) * rightMotorSpeed;
+    analogWrite(in_dir1,rightMotorSpeed);
+    analogWrite(in_dir2,LOW);
+  }
+
+  if(leftMotorSpeed >= 0)
+  {
+    if (leftMotorSpeed > MAX_PWM) leftMotorSpeed = MAX_PWM;
+    analogWrite(in_esq1,LOW);
+    analogWrite(in_esq2,leftMotorSpeed);
+  }
+  else
+  {
+    leftMotorSpeed = (-1) * leftMotorSpeed;
+    analogWrite(in_esq1,leftMotorSpeed);
+    analogWrite(in_esq2,LOW);
+  }
+}
+
+void MotorControlForTranslacional()
+{
+  leftMotorSpeed = PIDTranslacional + LinePID;
+  rightMotorSpeed = PIDTranslacional - LinePID;
 
   if(rightMotorSpeed >= 0)
   {
@@ -669,9 +736,8 @@ void callRobotTask(char status)
   case '1': //Map
     ReadArraySensor();
     CalculateLinePID(KpLine,KdLine);
-    CalculateLeftSpeedPID(KpSpeed, KdSpeed, KiSpeed, 0.75);
-    CalculateRightSpeedPID(KpSpeed, KdSpeed, KiSpeed, 0.75);
-    MotorControl();
+    CalculateSpeedPID(KpSpeed, KdSpeed, KiSpeed, 0.75);
+    MotorControlForTranslacional();
   break;
 
   case '2': //Run with track map

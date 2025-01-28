@@ -55,6 +55,7 @@ float leftMotorSpeed = 0;
 float rightMotorSpeed = 0;
 float leftMotorSpeedMS = 0;
 float rightMotorSpeedMS = 0;
+float robotSpeed = 0;
 float lastSpeed = 0;
 float runSpeed;
 float leftSpeedError;
@@ -69,6 +70,12 @@ float P_RightSpeed = 0;
 float D_RightSpeed = 0;
 float I_RightSpeed = 0;
 float rightSpeedPID = 0;
+float translacionalError;
+float lastTranslacionalError;
+float P_Translacional = 0;
+float D_Translacional = 0;
+float I_Translacional = 0;
+float PIDTranslacional = 0;
 
 #define BRUSHLESSSPEED 145   //100graus = 235g   125graus = 300g    150graus = 385g
 #define BRUSHLESSSPEED2 165
