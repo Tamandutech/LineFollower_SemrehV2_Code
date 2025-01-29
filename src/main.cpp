@@ -354,6 +354,27 @@ void CheckIfCurve(void *parameter)
   }
 }
 
+void CreateMarkByArray(void *parameter)
+{
+  static bool readingCurve = false;
+  while(true)
+  {
+    if(abs(lineError) > 1000 && readingCurve == false)
+    {
+      mapDataList.push_back(Map_Data(encoder.getCount(), encoder2.getCount(), (encoder.getCount()+encoder2.getCount())/2));
+      readingCurve = true;
+      SerialBT.println("Curva");
+    }
+    else if(abs(lineError) < 1000 && readingCurve == true)
+    {
+      mapDataList.push_back(Map_Data(encoder.getCount(), encoder2.getCount(), (encoder.getCount()+encoder2.getCount())/2));
+      readingCurve = false;
+      SerialBT.println("Reta");
+    }
+    vTaskDelay(pdMS_TO_TICKS(50));
+  }
+}
+
 void calculateRobotSpeed(void *parameter) //m/s
 {
   TickType_t xLastWakeTime = xTaskGetTickCount();
@@ -1040,6 +1061,7 @@ void setup()
 
   xTaskCreatePinnedToCore(CalculateLeftSpeed,"Left Motor Speed",10000,NULL,1,NULL,1);
   xTaskCreatePinnedToCore(CalculateRightSpeed,"Right Motor Speed",10000,NULL,1,NULL,1);
+  xTaskCreatePinnedToCore(CreateMarkByArray, "Create a mark", 10000, NULL, 1, NULL, 1);
   //xTaskCreatePinnedToCore(CheckIfCurve, "Create a marking", 10000, NULL, 1, NULL, 1);
   //xTaskCreatePinnedToCore(ler_laterais,"Sensores Laterais",4000,NULL,1,NULL,0);
 }
