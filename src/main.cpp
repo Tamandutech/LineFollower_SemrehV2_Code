@@ -596,7 +596,7 @@ void ler_laterais_digital(void *parameter){
   }
 }
 
-void tratamento()
+void processMapData()
 {
   if(!mapDataList.empty()) //verifica se a lista não está vazia
   {
@@ -929,9 +929,9 @@ void callRobotTask(char status)
     
   break;
 
-  case '8': //Tratamento
+  case '8': //Processamento dos dados
     static bool firstTimeProcess = true;
-    tratamento();
+    processMapData();
     encoder.clearCount();
     encoder2.clearCount();
     if(firstTimeProcess == true)
