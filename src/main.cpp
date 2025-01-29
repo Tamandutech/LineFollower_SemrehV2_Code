@@ -330,7 +330,7 @@ void CheckIfCurve(void *parameter)
     float leftDistanceTravelledMeter = (MM_PER_COUNT * leftDistanceTravelled)/1000;
     float rightDistanceTravelledMeter = (MM_PER_COUNT * rightDistanceTravelled)/1000;
     
-    float CurveRadius = abs((DISTANCEWHEELTOCENTER/2) * ((leftDistanceTravelledMeter+rightDistanceTravelledMeter)/(leftDistanceTravelledMeter-rightDistanceTravelledMeter)));
+    float CurveRadius = abs((DISTANCEWHEELTOCENTER) * ((leftDistanceTravelledMeter+rightDistanceTravelledMeter)/(leftDistanceTravelledMeter-rightDistanceTravelledMeter)));
     if(CurveRadius <= 0.5 && readingCurve == false)
     {
       mapDataList.push_back(Map_Data(encoder.getCount(), encoder2.getCount(), (encoder.getCount()+encoder2.getCount())/2));
@@ -630,7 +630,7 @@ void processMapData()
       else
       {
         //calcula o raio da curva
-        float curveRadius = abs((DISTANCEWHEELTOCENTER/2) * ((leftEncoderDeltaMeter+rightEncoderDeltaMeter)/(leftEncoderDeltaMeter-rightEncoderDeltaMeter)));
+        float curveRadius = abs((DISTANCEWHEELTOCENTER) * ((leftEncoderDeltaMeter+rightEncoderDeltaMeter)/(leftEncoderDeltaMeter-rightEncoderDeltaMeter)));
 
         if(curveRadius <= 0.5) //se o raio da curva for menor ou igual do que 50cm(0.5m), então é uma curva 
         {

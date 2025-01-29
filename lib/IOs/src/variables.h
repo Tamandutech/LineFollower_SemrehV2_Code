@@ -121,7 +121,7 @@ long int pul_prev_dir = 0;
 float MM_PER_COUNT = 0.576f;
 #define SAMPLING_TIME 10
 
-float DISTANCEWHEELTOCENTER = 0.126f;
+float DISTANCEWHEELTOCENTER = 0.063f;
 #define mmPerPulse 0.576
 float GRAVITY = 9.8f;
 float FRICTION = 0.577f;
