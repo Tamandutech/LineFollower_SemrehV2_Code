@@ -421,7 +421,6 @@ void MotorControl()
   }
 }
 
-<<<<<<< HEAD
 void MotorControlForTranslacional()
 {
   leftMotorSpeed = PIDTranslacional  + LinePID;
@@ -454,40 +453,6 @@ void MotorControlForTranslacional()
   }
 }
 
-=======
-void MotorControlForTranslacional()
-{
-  leftMotorSpeed = PIDTranslacional + LinePID;
-  rightMotorSpeed = PIDTranslacional - LinePID;
-
-  if(rightMotorSpeed >= 0)
-  {
-    if(rightMotorSpeed > MAX_PWM) rightMotorSpeed = MAX_PWM;
-    analogWrite(in_dir1,LOW);
-    analogWrite(in_dir2,rightMotorSpeed);
-  }
-  else
-  {
-    rightMotorSpeed = (-1) * rightMotorSpeed;
-    analogWrite(in_dir1,rightMotorSpeed);
-    analogWrite(in_dir2,LOW);
-  }
-
-  if(leftMotorSpeed >= 0)
-  {
-    if (leftMotorSpeed > MAX_PWM) leftMotorSpeed = MAX_PWM;
-    analogWrite(in_esq1,LOW);
-    analogWrite(in_esq2,leftMotorSpeed);
-  }
-  else
-  {
-    leftMotorSpeed = (-1) * leftMotorSpeed;
-    analogWrite(in_esq1,leftMotorSpeed);
-    analogWrite(in_esq2,LOW);
-  }
-}
-
->>>>>>> 222aa579abf77742a38744ade6f9a6c05087dca9
 void ler_laterais(void *parameter){
   static bool readingWhiteLeft;
   static bool readingWhiteRight; // variável para que a marcação seja lida apenas uma vez
@@ -806,13 +771,8 @@ void callRobotTask(char status)
   case '1': //Map
     ReadArraySensor();
     CalculateLinePID(KpLine,KdLine);
-<<<<<<< HEAD
     calcula_PID_translacional(KpSpeed, KdSpeed, KiSpeed, 0.75);
     MotorControlForTranslacional();
-=======
-    CalculateSpeedPID(KpSpeed, KdSpeed, KiSpeed, 0.75);
-    MotorControlForTranslacional();
->>>>>>> 222aa579abf77742a38744ade6f9a6c05087dca9
   break;
 
   case '2': //Run with track map
