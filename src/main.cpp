@@ -33,20 +33,20 @@ public:
   float lineSpeed;
   int curve;
   float accelerationSpace;
-  float desaccelerationSpace;
+  float decelerationSpace;
   float accelerationCount;
-  float desaccelerationCount;
+  float decelerationCount;
   float leftMotorCurveSpeed;
   float rightMotorCurveSpeed;
 
   Map_Data(float leftEncoderCount = 0, float rightEncoderCount = 0, float meanEncoderCount = 0,
               float leftEncoderDelta = 0, float rightEncoderDelta = 0, float meanEncoderDelta = 0, float curveSpeed = 0,
               float lineSpeed = 0, int curve = 0, float accelerationSpace = 0,
-              float desaccelerationSpace = 0, float accelerationCount = 0, float desaccelerationCount = 0,
+              float decelerationSpace = 0, float accelerationCount = 0, float decelerationCount = 0,
               float leftMotorCurveSpeed = 0, float rightMotorCurveSpeed = 0)
       : leftEncoderCount(leftEncoderCount), rightEncoderCount(rightEncoderCount), meanEncoderCount(meanEncoderCount),
       leftEncoderDelta(leftEncoderDelta), rightEncoderDelta(rightEncoderDelta), meanEncoderDelta((leftEncoderDelta + rightEncoderDelta)/2), curveSpeed(curveSpeed),
-      lineSpeed(lineSpeed), curve(curve), accelerationSpace(accelerationSpace), desaccelerationSpace(desaccelerationSpace), accelerationCount(accelerationCount), desaccelerationCount(desaccelerationCount),
+      lineSpeed(lineSpeed), curve(curve), accelerationSpace(accelerationSpace), decelerationSpace(decelerationSpace), accelerationCount(accelerationCount), decelerationCount(decelerationCount),
       leftMotorCurveSpeed(leftMotorCurveSpeed), rightMotorCurveSpeed(rightMotorCurveSpeed){}
 };
 
@@ -138,7 +138,7 @@ void readFile(const char * path){
       String accelerationCount = dataString.substring(fifthCommaIndex + 1, sixthCommaIndex);
 
       int seventhCommaIndex = dataString.indexOf(',', sixthCommaIndex + 1);
-      String desaccelerationCount = dataString.substring(sixthCommaIndex + 1, seventhCommaIndex);
+      String decelerationCount = dataString.substring(sixthCommaIndex + 1, seventhCommaIndex);
 
       int eighthCommaIndex = dataString.indexOf(',', seventhCommaIndex + 1);
       String leftMotorCurveSpeed = dataString.substring(seventhCommaIndex + 1, eighthCommaIndex);
@@ -150,7 +150,7 @@ void readFile(const char * path){
       float lmeanEncoderCount = atof(meanEncoderCount.c_str());
       float lcurveSpeed = atof(curveSpeed.c_str());
       float laccelerationCount = atof(accelerationCount.c_str());
-      float ldesaccelerationCount = atof(desaccelerationCount.c_str());
+      float ldecelerationCount = atof(decelerationCount.c_str());
       int curve = atoi(stringCurve.c_str());
       float lleftMotorCurveSpeed = atof(leftMotorCurveSpeed.c_str());
       float lrightMotorCurveSpeed = atof(rightMotorCurveSpeed.c_str());
@@ -167,14 +167,14 @@ void readFile(const char * path){
       SerialBT.print(",");
       SerialBT.print(laccelerationCount);
       SerialBT.print(",");
-      SerialBT.print(ldesaccelerationCount);
+      SerialBT.print(ldecelerationCount);
       SerialBT.print(",");
       SerialBT.print(lleftMotorCurveSpeed);
       SerialBT.print(",");
       SerialBT.println(lrightMotorCurveSpeed);
       
       
-      mapDataList.push_back(Map_Data(lleftEncoderCount, lrightEncoderCount, lmeanEncoderCount, 0.0f,0.0f,0.0f,lcurveSpeed,0.0f,curve,0.0f,0.0f,laccelerationCount,ldesaccelerationCount,lleftMotorCurveSpeed,lrightMotorCurveSpeed));
+      mapDataList.push_back(Map_Data(lleftEncoderCount, lrightEncoderCount, lmeanEncoderCount, 0.0f,0.0f,0.0f,lcurveSpeed,0.0f,curve,0.0f,0.0f,laccelerationCount,ldecelerationCount,lleftMotorCurveSpeed,lrightMotorCurveSpeed));
     }
   }
   SerialBT.println("Terminei de passar os dados pra RAM");
@@ -279,6 +279,41 @@ void CalculateRightSpeedPID(float KpParam_Translacional, float KdParam_Translaci
 
   rightSpeedPID = (KpParam_Translacional * P_RightSpeed) + (KdParam_Translacional * D_RightSpeed) + (KiParam_Translacional * I_RightSpeed);
   lastRightSpeedError = rightSpeedError;
+}
+
+void calculateRobotSpeed(void *parameter) //m/s
+{
+  TickType_t xLastWakeTime = xTaskGetTickCount();
+  while(true)
+  {
+    leftEncoderPulse = encoder.getCount();
+    rightEncoderPulse = encoder2.getCount();
+    vTaskDelayUntil(&xLastWakeTime,pdMS_TO_TICKS(SAMPLING_TIME));  // Pausa de 10ms entre as verificações
+    leftDistanceTravelled = encoder.getCount() - leftEncoderPulse;
+    rightDistanceTravelled = encoder2.getCount() - rightEncoderPulse;
+    robotSpeed = ((leftDistanceTravelled + rightDistanceTravelled)/2)* MM_PER_COUNT / SAMPLING_TIME; //m/s
+  }
+}
+
+float translacionalErrorBuffer[9]; // buffer to store the last 5 values of translationalError
+int translacionalErrorIndex = 0; // index to keep track of the current position in the buffer
+void calcula_PID_translacional(float KpParam_Translacional, float KdParam_Translacional,float KiParam_Translacional, float desiredSpeed)
+{
+  translacionalError = curva_acel(desiredSpeed) - robotSpeed;
+  P_Translacional = translacionalError;
+  D_Translacional = translacionalError - lastTranslacionalError;
+
+  // update the buffer and calculate the sum of the last 5 values
+  translacionalErrorBuffer[translacionalErrorIndex] = translacionalError;
+  translacionalErrorIndex = (translacionalErrorIndex + 1) % 9;
+  float sum = 0;
+  for (int i = 0; i < 9; i++) {
+    sum += translacionalErrorBuffer[i];
+  }
+  I_Translacional = sum;
+
+  PIDTranslacional = (KpParam_Translacional * P_Translacional) + (KdParam_Translacional * D_Translacional) + (KiParam_Translacional * I_Translacional);
+  lastTranslacionalError = translacionalError;
 }
 
 void CheckIfCurve(void *parameter)
@@ -386,6 +421,40 @@ void MotorControl()
   }
 }
 
+<<<<<<< HEAD
+void MotorControlForTranslacional()
+{
+  leftMotorSpeed = PIDTranslacional  + LinePID;
+  rightMotorSpeed = PIDTranslacional  - LinePID;
+
+  if(rightMotorSpeed >= 0)
+  {
+    if(rightMotorSpeed > MAX_PWM) rightMotorSpeed = MAX_PWM;
+    analogWrite(in_dir1,LOW);
+    analogWrite(in_dir2,rightMotorSpeed);
+  }
+  else
+  {
+    rightMotorSpeed = (-1) * rightMotorSpeed;
+    analogWrite(in_dir1,rightMotorSpeed);
+    analogWrite(in_dir2,LOW);
+  }
+
+  if(leftMotorSpeed >= 0)
+  {
+    if (leftMotorSpeed > MAX_PWM) leftMotorSpeed = MAX_PWM;
+    analogWrite(in_esq1,LOW);
+    analogWrite(in_esq2,leftMotorSpeed);
+  }
+  else
+  {
+    leftMotorSpeed = (-1) * leftMotorSpeed;
+    analogWrite(in_esq1,leftMotorSpeed);
+    analogWrite(in_esq2,LOW);
+  }
+}
+
+=======
 void MotorControlForTranslacional()
 {
   leftMotorSpeed = PIDTranslacional + LinePID;
@@ -418,6 +487,7 @@ void MotorControlForTranslacional()
   }
 }
 
+>>>>>>> 222aa579abf77742a38744ade6f9a6c05087dca9
 void ler_laterais(void *parameter){
   static bool readingWhiteLeft;
   static bool readingWhiteRight; // variável para que a marcação seja lida apenas uma vez
@@ -605,7 +675,7 @@ void tratamento()
   }
 
   float accelerationSpaceMeter;
-  float desaccelerationSpaceMeter;
+  float decelerationSpaceMeter;
   for(int i = 0; i < mapDataList.size(); i++)
   {
     if(mapDataList[i].curve == 0) //entra se for uma reta
@@ -616,58 +686,58 @@ void tratamento()
         {
           //calcula o espaço para aceleração e desaceleração
           accelerationSpaceMeter = (pow(MAXSPEED,2) - pow(mapDataList[i-1].curveSpeed,2))/(2*acceleration);
-          desaccelerationSpaceMeter = -((pow(mapDataList[i+1].curveSpeed,2) - pow(MAXSPEED,2))/(2*acceleration));
+          decelerationSpaceMeter = -((pow(mapDataList[i+1].curveSpeed,2) - pow(MAXSPEED,2))/(2*acceleration));
 
           //transforma metros em pulsos de encoder
           mapDataList[i].accelerationSpace = (accelerationSpaceMeter/MM_PER_COUNT)*1000;
-          mapDataList[i].desaccelerationSpace = (desaccelerationSpaceMeter/MM_PER_COUNT)*1000;
+          mapDataList[i].decelerationSpace = (decelerationSpaceMeter/MM_PER_COUNT)*1000;
         }
         else //entra se for o primeiro item da lista
         {
           //calcula o espaço para aceleração e desaceleração
           accelerationSpaceMeter = (pow(MAXSPEED,2))/(2*acceleration);
-          desaccelerationSpaceMeter = -((pow(mapDataList[i+1].curveSpeed,2) - pow(MAXSPEED,2))/(2*acceleration));
+          decelerationSpaceMeter = -((pow(mapDataList[i+1].curveSpeed,2) - pow(MAXSPEED,2))/(2*acceleration));
 
           //transforma metros em pulsos de encoder
           mapDataList[i].accelerationSpace = (accelerationSpaceMeter/MM_PER_COUNT)*1000;
-          mapDataList[i].desaccelerationSpace = (desaccelerationSpaceMeter/MM_PER_COUNT)*1000;
+          mapDataList[i].decelerationSpace = (decelerationSpaceMeter/MM_PER_COUNT)*1000;
         }
       }
       else //se for o ultimo item da lista
       {
         //calcula o espaço para aceleração e desaceleração
         accelerationSpaceMeter = (pow(MAXSPEED,2) - pow(mapDataList[i-1].curveSpeed,2))/(2*acceleration);
-        desaccelerationSpaceMeter = -((pow(2,2) - pow(MAXSPEED,2))/(2*acceleration));
+        decelerationSpaceMeter = -((pow(2,2) - pow(MAXSPEED,2))/(2*acceleration));
 
         //transforma metros em pulsos de encoder
         mapDataList[i].accelerationSpace = (accelerationSpaceMeter/MM_PER_COUNT)*1000.0f;
-        mapDataList[i].desaccelerationSpace = (desaccelerationSpaceMeter/MM_PER_COUNT)*1000.0f;
+        mapDataList[i].decelerationSpace = (decelerationSpaceMeter/MM_PER_COUNT)*1000.0f;
       }    
     }
     if(i==0)
     {
-      if((accelerationSpaceMeter + desaccelerationSpaceMeter) < mapDataList[i].meanEncoderDelta) //se a soma dos espaços for menor do que o tamanho da reta
+      if((accelerationSpaceMeter + decelerationSpaceMeter) < mapDataList[i].meanEncoderDelta) //se a soma dos espaços for menor do que o tamanho da reta
       {
         mapDataList[i].accelerationCount = mapDataList[i].accelerationSpace;
-        mapDataList[i].desaccelerationCount = mapDataList[i].meanEncoderCount - mapDataList[i].desaccelerationSpace;
+        mapDataList[i].decelerationCount = mapDataList[i].meanEncoderCount - mapDataList[i].decelerationSpace;
       }
       else
       {
         mapDataList[i].accelerationCount = (((mapDataList[i].meanEncoderDelta/MM_PER_COUNT)*1000)/2);
-        mapDataList[i].desaccelerationCount = mapDataList[i].meanEncoderCount - (((mapDataList[i].meanEncoderDelta/MM_PER_COUNT)*1000)/2);
+        mapDataList[i].decelerationCount = mapDataList[i].meanEncoderCount - (((mapDataList[i].meanEncoderDelta/MM_PER_COUNT)*1000)/2);
       }
     }
     else
     {
-      if((accelerationSpaceMeter + desaccelerationSpaceMeter) < mapDataList[i].meanEncoderDelta) //se a soma dos espaços for menor do que o tamanho da reta
+      if((accelerationSpaceMeter + decelerationSpaceMeter) < mapDataList[i].meanEncoderDelta) //se a soma dos espaços for menor do que o tamanho da reta
       {
         mapDataList[i].accelerationCount = mapDataList[i-1].meanEncoderCount + mapDataList[i].accelerationSpace;
-        mapDataList[i].desaccelerationCount = mapDataList[i].meanEncoderCount - mapDataList[i].desaccelerationSpace;
+        mapDataList[i].decelerationCount = mapDataList[i].meanEncoderCount - mapDataList[i].decelerationSpace;
       }
       else
       {
         mapDataList[i].accelerationCount = (((mapDataList[i].meanEncoderDelta/MM_PER_COUNT)*1000)/2) + mapDataList[i-1].meanEncoderCount;
-        mapDataList[i].desaccelerationCount = mapDataList[i].meanEncoderCount - (((mapDataList[i].meanEncoderDelta/MM_PER_COUNT)*1000)/2);
+        mapDataList[i].decelerationCount = mapDataList[i].meanEncoderCount - (((mapDataList[i].meanEncoderDelta/MM_PER_COUNT)*1000)/2);
       }
     }
   }
@@ -736,8 +806,13 @@ void callRobotTask(char status)
   case '1': //Map
     ReadArraySensor();
     CalculateLinePID(KpLine,KdLine);
+<<<<<<< HEAD
+    calcula_PID_translacional(KpSpeed, KdSpeed, KiSpeed, 0.75);
+    MotorControlForTranslacional();
+=======
     CalculateSpeedPID(KpSpeed, KdSpeed, KiSpeed, 0.75);
     MotorControlForTranslacional();
+>>>>>>> 222aa579abf77742a38744ade6f9a6c05087dca9
   break;
 
   case '2': //Run with track map
@@ -761,7 +836,7 @@ void callRobotTask(char status)
               led_stip.setPixelColor(0,G);
               led_stip.show();
             }
-            else if(quantoAndouAteAgora >= mapDataList[i].desaccelerationCount)
+            else if(quantoAndouAteAgora >= mapDataList[i].decelerationCount)
             {
               ReadArraySensor();
               CalculateLinePID(KpLine,KdLine);
@@ -786,8 +861,13 @@ void callRobotTask(char status)
           {
             ReadArraySensor();
             CalculateLinePID(KpLine,KdLine);
+<<<<<<< HEAD
+            CalculateLeftSpeedPID(KpSpeed, KdSpeed, KiSpeed, (mapDataList[i].leftMotorCurveSpeed));
+            CalculateRightSpeedPID(KpSpeed, KdSpeed, KiSpeed, (mapDataList[i].curveSpeed));
+=======
             CalculateLeftSpeedPID(KpSpeed, KdSpeed, KiSpeed, (mapDataList[i].leftMotorCurveSpeed));
             CalculateRightSpeedPID(KpSpeed, KdSpeed, KiSpeed, (mapDataList[i].rightMotorCurveSpeed));
+>>>>>>> 222aa579abf77742a38744ade6f9a6c05087dca9
             MotorControl();
             led_stip.setPixelColor(0,255,255,255);
             led_stip.show();
@@ -894,11 +974,11 @@ void callRobotTask(char status)
           string curve = to_string(mapDataList[i].curve);
           string curveSpeed = to_string(mapDataList[i].curveSpeed);
           string accelerationCount = to_string(mapDataList[i].accelerationCount);
-          string desaccelerationCount = to_string(mapDataList[i].desaccelerationCount);
+          string decelerationCount = to_string(mapDataList[i].decelerationCount);
           string leftMotorCurveSpeed = to_string(mapDataList[i].leftMotorCurveSpeed);
           string rightMotorCurveSpeed = to_string(mapDataList[i].rightMotorCurveSpeed);
 
-          string dataString = leftEncoderCount + "," + rightEncoderCount + "," + meanEncoderCount + "," + curve + "," + curveSpeed + "," + accelerationCount + "," + desaccelerationCount + leftMotorCurveSpeed + "," + rightMotorCurveSpeed + "," + "\n";
+          string dataString = leftEncoderCount + "," + rightEncoderCount + "," + meanEncoderCount + "," + curve + "," + curveSpeed + "," + accelerationCount + "," + decelerationCount + leftMotorCurveSpeed + "," + rightMotorCurveSpeed + "," + "\n";
           writeFile("/Map_Data_Original.txt", dataString.c_str());
         }
         else
@@ -909,11 +989,11 @@ void callRobotTask(char status)
           string curve = to_string(mapDataList[i].curve);
           string curveSpeed = to_string(mapDataList[i].curveSpeed);
           string accelerationCount = to_string(mapDataList[i].accelerationCount);
-          string desaccelerationCount = to_string(mapDataList[i].desaccelerationCount);
+          string decelerationCount = to_string(mapDataList[i].decelerationCount);
           string leftMotorCurveSpeed = to_string(mapDataList[i].leftMotorCurveSpeed);
           string rightMotorCurveSpeed = to_string(mapDataList[i].rightMotorCurveSpeed);
 
-          string dataString = leftEncoderCount + "," + rightEncoderCount + "," + meanEncoderCount + "," + curve + "," + curveSpeed + "," + accelerationCount + "," + desaccelerationCount + leftMotorCurveSpeed + ";" + rightMotorCurveSpeed + ";" + "\n";
+          string dataString = leftEncoderCount + "," + rightEncoderCount + "," + meanEncoderCount + "," + curve + "," + curveSpeed + "," + accelerationCount + "," + decelerationCount + leftMotorCurveSpeed + ";" + rightMotorCurveSpeed + ";" + "\n";
           appendFile("/Map_Data_Original.txt", dataString.c_str());
         }
       }
