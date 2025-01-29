@@ -821,13 +821,8 @@ void callRobotTask(char status)
           {
             ReadArraySensor();
             CalculateLinePID(KpLine,KdLine);
-<<<<<<< HEAD
-            CalculateLeftSpeedPID(KpSpeed, KdSpeed, KiSpeed, (mapDataList[i].leftMotorCurveSpeed));
-            CalculateRightSpeedPID(KpSpeed, KdSpeed, KiSpeed, (mapDataList[i].curveSpeed));
-=======
             CalculateLeftSpeedPID(KpSpeed, KdSpeed, KiSpeed, (mapDataList[i].leftMotorCurveSpeed));
             CalculateRightSpeedPID(KpSpeed, KdSpeed, KiSpeed, (mapDataList[i].rightMotorCurveSpeed));
->>>>>>> 222aa579abf77742a38744ade6f9a6c05087dca9
             MotorControl();
             led_stip.setPixelColor(0,255,255,255);
             led_stip.show();
