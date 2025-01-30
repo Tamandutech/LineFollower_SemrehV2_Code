@@ -118,19 +118,18 @@ long int enc_dir_pul = 0;
 long int pul_prev_esq = 0;
 long int pul_prev_dir = 0;
 
-float MM_PER_COUNT = 0.576f;
 #define SAMPLING_TIME 10
 
-float DISTANCEWHEELTOCENTER = 0.063f;
-#define mmPerPulse 0.576
-float GRAVITY = 9.8f;
-float FRICTION = 0.577f;
-//#define desaceleracao 5
-float MASS = 0.178f;
-float BRUSHLESSFORCE = 3.92f;
-float MAXSPEED = 4.5f;
-float MAXSPEED2 = 4.5f;
-float acceleration = 15.0f;
+//variáveis para processamento do mapeamento
+const float MM_PER_COUNT = 0.576f;
+const float DISTANCE_WHEEL_TO_CENTER = 0.063f;
+const float GRAVITY = 9.8f;
+const float FRICTION = 0.577f;
+const float MASS = 0.178f;
+const float BRUSHLESS_FORCE = 3.92f;
+const float MAXSPEED = 4.5f;
+const float MAXSPEED2 = 4.5f;
+const float ACCELERATION = 15.0f;
 
 #define FORMAT_LITTLEFS_IF_FAILED true
 

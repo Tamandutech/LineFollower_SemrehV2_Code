@@ -330,7 +330,7 @@ void CheckIfCurve(void *parameter)
     float leftDistanceTravelledMeter = (MM_PER_COUNT * leftDistanceTravelled)/1000;
     float rightDistanceTravelledMeter = (MM_PER_COUNT * rightDistanceTravelled)/1000;
     
-    float CurveRadius = abs((DISTANCEWHEELTOCENTER) * ((leftDistanceTravelledMeter+rightDistanceTravelledMeter)/(leftDistanceTravelledMeter-rightDistanceTravelledMeter)));
+    float CurveRadius = abs((DISTANCE_WHEEL_TO_CENTER) * ((leftDistanceTravelledMeter+rightDistanceTravelledMeter)/(leftDistanceTravelledMeter-rightDistanceTravelledMeter)));
     if(CurveRadius <= 0.5 && readingCurve == false)
     {
       mapDataList.push_back(Map_Data(encoder.getCount(), encoder2.getCount(), (encoder.getCount()+encoder2.getCount())/2));
@@ -630,7 +630,7 @@ void processMapData()
       else
       {
         //calcula o raio da curva
-        float curveRadius = abs((DISTANCEWHEELTOCENTER) * ((leftEncoderDeltaMeter+rightEncoderDeltaMeter)/(leftEncoderDeltaMeter-rightEncoderDeltaMeter)));
+        float curveRadius = abs((DISTANCE_WHEEL_TO_CENTER) * ((leftEncoderDeltaMeter+rightEncoderDeltaMeter)/(leftEncoderDeltaMeter-rightEncoderDeltaMeter)));
 
         if(curveRadius <= 0.5) //se o raio da curva for menor ou igual do que 50cm(0.5m), então é uma curva 
         {
@@ -639,13 +639,13 @@ void processMapData()
 
           if(leftEncoderDeltaMeter > rightEncoderDeltaMeter) //Vel esq > Vel dir aka curva para direita
           {
-            currentData.rightMotorCurveSpeed = currentData.curveSpeed * (curveRadius - DISTANCEWHEELTOCENTER) / curveRadius;
-            currentData.leftMotorCurveSpeed = currentData.curveSpeed * (curveRadius + DISTANCEWHEELTOCENTER) / curveRadius;
+            currentData.rightMotorCurveSpeed = currentData.curveSpeed * (curveRadius - DISTANCE_WHEEL_TO_CENTER) / curveRadius;
+            currentData.leftMotorCurveSpeed = currentData.curveSpeed * (curveRadius + DISTANCE_WHEEL_TO_CENTER) / curveRadius;
           }
           else //Vel dir > Vel esq aka curva para esquerda
           {
-            currentData.rightMotorCurveSpeed = currentData.curveSpeed * (curveRadius + DISTANCEWHEELTOCENTER) / curveRadius;
-            currentData.leftMotorCurveSpeed = currentData.curveSpeed * (curveRadius - DISTANCEWHEELTOCENTER) / curveRadius;
+            currentData.rightMotorCurveSpeed = currentData.curveSpeed * (curveRadius + DISTANCE_WHEEL_TO_CENTER) / curveRadius;
+            currentData.leftMotorCurveSpeed = currentData.curveSpeed * (curveRadius - DISTANCE_WHEEL_TO_CENTER) / curveRadius;
           }
         }
         else //se for maior é uma reta
@@ -671,8 +671,8 @@ void processMapData()
         if(i != 0) //entra se não for o primiero item da lista
         {
           //calcula o espaço para aceleração e desaceleração
-          accelerationSpaceMeter = (pow(MAXSPEED,2) - pow(mapDataList[i-1].curveSpeed,2))/(2*acceleration);
-          decelerationSpaceMeter = -((pow(mapDataList[i+1].curveSpeed,2) - pow(MAXSPEED,2))/(2*acceleration));
+          accelerationSpaceMeter = (pow(MAXSPEED,2) - pow(mapDataList[i-1].curveSpeed,2))/(2*ACCELERATION);
+          decelerationSpaceMeter = -((pow(mapDataList[i+1].curveSpeed,2) - pow(MAXSPEED,2))/(2*ACCELERATION));
 
           //transforma metros em pulsos de encoder
           mapDataList[i].accelerationSpace = (accelerationSpaceMeter/MM_PER_COUNT)*1000;
@@ -681,8 +681,8 @@ void processMapData()
         else //entra se for o primeiro item da lista
         {
           //calcula o espaço para aceleração e desaceleração
-          accelerationSpaceMeter = (pow(MAXSPEED,2))/(2*acceleration);
-          decelerationSpaceMeter = -((pow(mapDataList[i+1].curveSpeed,2) - pow(MAXSPEED,2))/(2*acceleration));
+          accelerationSpaceMeter = (pow(MAXSPEED,2))/(2*ACCELERATION);
+          decelerationSpaceMeter = -((pow(mapDataList[i+1].curveSpeed,2) - pow(MAXSPEED,2))/(2*ACCELERATION));
 
           //transforma metros em pulsos de encoder
           mapDataList[i].accelerationSpace = (accelerationSpaceMeter/MM_PER_COUNT)*1000;
@@ -692,8 +692,8 @@ void processMapData()
       else //se for o ultimo item da lista
       {
         //calcula o espaço para aceleração e desaceleração
-        accelerationSpaceMeter = (pow(MAXSPEED,2) - pow(mapDataList[i-1].curveSpeed,2))/(2*acceleration);
-        decelerationSpaceMeter = -((pow(2,2) - pow(MAXSPEED,2))/(2*acceleration));
+        accelerationSpaceMeter = (pow(MAXSPEED,2) - pow(mapDataList[i-1].curveSpeed,2))/(2*ACCELERATION);
+        decelerationSpaceMeter = -((pow(2,2) - pow(MAXSPEED,2))/(2*ACCELERATION));
 
         //transforma metros em pulsos de encoder
         mapDataList[i].accelerationSpace = (accelerationSpaceMeter/MM_PER_COUNT)*1000.0f;
