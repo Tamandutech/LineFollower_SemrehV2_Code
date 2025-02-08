@@ -202,11 +202,12 @@ float AccelerationCurve(float speedGoal)
   if (speedGoal > lastSpeed)
   {
     runSpeed = speedGoal;
+    lastSpeed = speedGoal;
   }
   else if (speedGoal < lastSpeed)
   {
-    lastSpeed -= 0.015f;
-    runSpeed = speedGoal;
+    lastSpeed -= 0.03f;
+    runSpeed = lastSpeed;
   }
   else
   {
@@ -281,25 +282,25 @@ void CalculateRightSpeedPID(float KpParam_Translacional, float KdParam_Translaci
   lastRightSpeedError = rightSpeedError;
 }
 
-void calculateRobotSpeed(void *parameter) //m/s
-{
-  TickType_t xLastWakeTime = xTaskGetTickCount();
-  while(true)
-  {
-    leftEncoderPulse = encoder.getCount();
-    rightEncoderPulse = encoder2.getCount();
-    vTaskDelayUntil(&xLastWakeTime,pdMS_TO_TICKS(SAMPLING_TIME));  // Pausa de 10ms entre as verificações
-    leftDistanceTravelled = encoder.getCount() - leftEncoderPulse;
-    rightDistanceTravelled = encoder2.getCount() - rightEncoderPulse;
-    robotSpeed = ((leftDistanceTravelled + rightDistanceTravelled)/2)* MM_PER_COUNT / SAMPLING_TIME; //m/s
-  }
-}
+// void calculateRobotSpeed(void *parameter) //m/s
+// {
+//   TickType_t xLastWakeTime = xTaskGetTickCount();
+//   while(true)
+//   {
+//     leftEncoderPulse = encoder.getCount();
+//     rightEncoderPulse = encoder2.getCount();
+//     vTaskDelayUntil(&xLastWakeTime,pdMS_TO_TICKS(SAMPLING_TIME));  // Pausa de 10ms entre as verificações
+//     leftDistanceTravelled = encoder.getCount() - leftEncoderPulse;
+//     rightDistanceTravelled = encoder2.getCount() - rightEncoderPulse;
+//     robotSpeed = ((leftDistanceTravelled + rightDistanceTravelled)/2)* MM_PER_COUNT / SAMPLING_TIME; //m/s
+//   }
+// }
 
 float translacionalErrorBuffer[9]; // buffer to store the last 5 values of translationalError
 int translacionalErrorIndex = 0; // index to keep track of the current position in the buffer
 void calcula_PID_translacional(float KpParam_Translacional, float KdParam_Translacional,float KiParam_Translacional, float desiredSpeed)
 {
-  translacionalError = curva_acel(desiredSpeed) - robotSpeed;
+  translacionalError = AccelerationCurve(desiredSpeed) - robotSpeed;
   P_Translacional = translacionalError;
   D_Translacional = translacionalError - lastTranslacionalError;
 
@@ -359,13 +360,13 @@ void CreateMarkByArray(void *parameter)
   static bool readingCurve = false;
   while(true)
   {
-    if(abs(lineError) > 1000 && readingCurve == false)
+    if(abs(lineError) > 600 && readingCurve == false)
     {
       mapDataList.push_back(Map_Data(encoder.getCount(), encoder2.getCount(), (encoder.getCount()+encoder2.getCount())/2));
       readingCurve = true;
       SerialBT.println("Curva");
     }
-    else if(abs(lineError) < 1000 && readingCurve == true)
+    else if(abs(lineError) <= 600 && readingCurve == true)
     {
       mapDataList.push_back(Map_Data(encoder.getCount(), encoder2.getCount(), (encoder.getCount()+encoder2.getCount())/2));
       readingCurve = false;
@@ -389,25 +390,25 @@ void calculateRobotSpeed(void *parameter) //m/s
   }
 }
 
-float translacionalErrorBuffer[9]; // buffer to store the last 5 values of translationalError
-int translacionalErrorIndex = 0; // index to keep track of the current position in the buffer
+float speedErrorBuffer[9]; // buffer to store the last 5 values of translationalError
+int speedErrorIndex = 0; // index to keep track of the current position in the buffer
 void CalculateSpeedPID(float KpParam_Translacional, float KdParam_Translacional,float KiParam_Translacional, float desiredSpeed)
 {
-  translacionalError = AccelerationCurve(desiredSpeed) - robotSpeed;
-  P_Translacional = translacionalError;
-  D_Translacional = translacionalError - lastTranslacionalError;
+  speedError = AccelerationCurve(desiredSpeed) - robotSpeed;
+  P_Speed = speedError;
+  D_Speed = speedError - lastSpeedError;
 
   // update the buffer and calculate the sum of the last 5 values
-  translacionalErrorBuffer[translacionalErrorIndex] = translacionalError;
-  translacionalErrorIndex = (translacionalErrorIndex + 1) % 9;
+  speedErrorBuffer[speedErrorIndex] = speedError;
+  speedErrorIndex = (speedErrorIndex + 1) % 9;
   float sum = 0;
   for (int i = 0; i < 9; i++) {
-    sum += translacionalErrorBuffer[i];
+    sum += speedErrorBuffer[i];
   }
-  I_Translacional = sum;
+  I_Speed = sum;
 
-  PIDTranslacional = (KpParam_Translacional * P_Translacional) + (KdParam_Translacional * D_Translacional) + (KiParam_Translacional * I_Translacional);
-  lastTranslacionalError = translacionalError;
+  PIDSpeed = (KpParam_Translacional * P_Speed) + (KdParam_Translacional * D_Speed) + (KiParam_Translacional * I_Speed);
+  lastSpeedError = speedError;
 }
 
 void MotorControl()
@@ -635,7 +636,7 @@ void processMapData()
         if(curveRadius <= 0.5) //se o raio da curva for menor ou igual do que 50cm(0.5m), então é uma curva 
         {
           currentData.curve = 1;
-          currentData.curveSpeed = pow((curveRadius*FRICTION)*(GRAVITY+(BRUSHLESSFORCE/MASS)),0.5); //calcula a velocidade para fazer a curva
+          currentData.curveSpeed = pow((curveRadius*FRICTION)*(GRAVITY+(BRUSHLESS_FORCE/MASS)),0.5); //calcula a velocidade para fazer a curva
 
           if(leftEncoderDeltaMeter > rightEncoderDeltaMeter) //Vel esq > Vel dir aka curva para direita
           {
@@ -792,7 +793,7 @@ void callRobotTask(char status)
   case '1': //Map
     ReadArraySensor();
     CalculateLinePID(KpLine,KdLine);
-    calcula_PID_translacional(KpSpeed, KdSpeed, KiSpeed, 0.75);
+    calcula_PID_translacional(KpSpeedT, KdSpeedT, KiSpeedT, 0.5);
     MotorControlForTranslacional();
   break;
 
@@ -811,9 +812,8 @@ void callRobotTask(char status)
             {
               ReadArraySensor();
               CalculateLinePID(KpLine,KdLine);
-              CalculateLeftSpeedPID(KpSpeed, KdSpeed, KiSpeed, MAXSPEED);
-              CalculateRightSpeedPID(KpSpeed, KdSpeed, KiSpeed, MAXSPEED);
-              MotorControl();
+              calcula_PID_translacional(KpSpeedT, KdSpeedT, KiSpeedT, MAXSPEED);
+              MotorControlForTranslacional();
               led_stip.setPixelColor(0,G);
               led_stip.show();
             }
@@ -821,9 +821,8 @@ void callRobotTask(char status)
             {
               ReadArraySensor();
               CalculateLinePID(KpLine,KdLine);
-              CalculateLeftSpeedPID(KpSpeed, KdSpeed, KiSpeed, (mapDataList[i+1].curveSpeed));
-              CalculateRightSpeedPID(KpSpeed, KdSpeed, KiSpeed, (mapDataList[i+1].curveSpeed));
-              MotorControl();
+              calcula_PID_translacional(KpSpeedT, KdSpeedT, KiSpeedT, (mapDataList[i+1].curveSpeed));
+              MotorControlForTranslacional();
               led_stip.setPixelColor(0,R);
               led_stip.show();
             }
@@ -831,9 +830,8 @@ void callRobotTask(char status)
             {
               ReadArraySensor();
               CalculateLinePID(KpLine,KdLine);
-              CalculateLeftSpeedPID(KpSpeed, KdSpeed, KiSpeed, MAXSPEED);
-              CalculateRightSpeedPID(KpSpeed, KdSpeed, KiSpeed, MAXSPEED);
-              MotorControl();
+              calcula_PID_translacional(KpSpeedT, KdSpeedT, KiSpeedT, MAXSPEED);
+              MotorControlForTranslacional();
               led_stip.setPixelColor(0,B);
               led_stip.show();
             }
@@ -842,9 +840,11 @@ void callRobotTask(char status)
           {
             ReadArraySensor();
             CalculateLinePID(KpLine,KdLine);
-            CalculateLeftSpeedPID(KpSpeed, KdSpeed, KiSpeed, (mapDataList[i].leftMotorCurveSpeed));
-            CalculateRightSpeedPID(KpSpeed, KdSpeed, KiSpeed, (mapDataList[i].rightMotorCurveSpeed));
-            MotorControl();
+            // CalculateLeftSpeedPID(KpSpeed, KdSpeed, KiSpeed, (mapDataList[i].leftMotorCurveSpeed));
+            // CalculateRightSpeedPID(KpSpeed, KdSpeed, KiSpeed, (mapDataList[i].rightMotorCurveSpeed));
+            // MotorControl();
+            calcula_PID_translacional(KpSpeedT, KdSpeedT, KiSpeedT, (mapDataList[i].curveSpeed));
+            MotorControlForTranslacional();
             led_stip.setPixelColor(0,255,255,255);
             led_stip.show();
           }
@@ -954,7 +954,7 @@ void callRobotTask(char status)
           string leftMotorCurveSpeed = to_string(mapDataList[i].leftMotorCurveSpeed);
           string rightMotorCurveSpeed = to_string(mapDataList[i].rightMotorCurveSpeed);
 
-          string dataString = leftEncoderCount + "," + rightEncoderCount + "," + meanEncoderCount + "," + curve + "," + curveSpeed + "," + accelerationCount + "," + decelerationCount + leftMotorCurveSpeed + "," + rightMotorCurveSpeed + "," + "\n";
+          string dataString = leftEncoderCount + "," + rightEncoderCount + "," + meanEncoderCount + "," + curve + "," + curveSpeed + "," + accelerationCount + "," + decelerationCount + "," + leftMotorCurveSpeed + "," + rightMotorCurveSpeed + "\n";
           writeFile("/Map_Data_Original.txt", dataString.c_str());
         }
         else
@@ -969,7 +969,7 @@ void callRobotTask(char status)
           string leftMotorCurveSpeed = to_string(mapDataList[i].leftMotorCurveSpeed);
           string rightMotorCurveSpeed = to_string(mapDataList[i].rightMotorCurveSpeed);
 
-          string dataString = leftEncoderCount + "," + rightEncoderCount + "," + meanEncoderCount + "," + curve + "," + curveSpeed + "," + accelerationCount + "," + decelerationCount + leftMotorCurveSpeed + ";" + rightMotorCurveSpeed + ";" + "\n";
+          string dataString = leftEncoderCount + "," + rightEncoderCount + "," + meanEncoderCount + "," + curve + "," + curveSpeed + "," + accelerationCount + "," + decelerationCount + "," + leftMotorCurveSpeed + "," + rightMotorCurveSpeed + "\n";
           appendFile("/Map_Data_Original.txt", dataString.c_str());
         }
       }
@@ -1061,7 +1061,8 @@ void setup()
 
   xTaskCreatePinnedToCore(CalculateLeftSpeed,"Left Motor Speed",10000,NULL,1,NULL,1);
   xTaskCreatePinnedToCore(CalculateRightSpeed,"Right Motor Speed",10000,NULL,1,NULL,1);
-  xTaskCreatePinnedToCore(CreateMarkByArray, "Create a mark", 10000, NULL, 1, NULL, 1);
+  xTaskCreatePinnedToCore(calculateRobotSpeed,"Velocidade",10000,NULL,1,NULL,1);
+  //xTaskCreatePinnedToCore(CreateMarkByArray, "Create a mark", 10000, NULL, 1, NULL, 1);
   //xTaskCreatePinnedToCore(CheckIfCurve, "Create a marking", 10000, NULL, 1, NULL, 1);
   //xTaskCreatePinnedToCore(ler_laterais,"Sensores Laterais",4000,NULL,1,NULL,0);
 }
@@ -1071,6 +1072,8 @@ void loop()
   bluetoothRead();
 
   callRobotTask(lastReceivedChar);
+  // ReadArraySensor();
+  // SerialBT.println(lineError);
   // SerialBT.print(encoder.getCount());
   // SerialBT.print(" || ");
   // SerialBT.println(encoder2.getCount());

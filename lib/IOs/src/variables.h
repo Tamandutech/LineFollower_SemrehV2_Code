@@ -77,6 +77,13 @@ float D_Translacional = 0;
 float I_Translacional = 0;
 float PIDTranslacional = 0;
 
+float speedError;
+float lastSpeedError;
+float P_Speed = 0;
+float D_Speed = 0;
+float I_Speed = 0;
+float PIDSpeed = 0;
+
 #define BRUSHLESSSPEED 145   //100graus = 235g   125graus = 300g    150graus = 385g
 #define BRUSHLESSSPEED2 165
 
@@ -95,6 +102,10 @@ float LinePID = 0; // Valor do ganho do PID total
 float KpSpeed = 1;
 float KdSpeed = 20;
 float KiSpeed = 4.6;
+
+float KpSpeedT = 1;
+float KdSpeedT = 20;
+float KiSpeedT = 4.6;
 
 //Valores para leitura do sensores laterais
 #define DEBOUNCETIME 200
@@ -126,8 +137,8 @@ const float DISTANCE_WHEEL_TO_CENTER = 0.063f;
 const float GRAVITY = 9.8f;
 const float FRICTION = 0.577f;
 const float MASS = 0.178f;
-const float BRUSHLESS_FORCE = 3.92f;
-const float MAXSPEED = 4.5f;
+const float BRUSHLESS_FORCE = 3.43f;  //3,92 = 400g
+const float MAXSPEED = 5.0f;
 const float MAXSPEED2 = 4.5f;
 const float ACCELERATION = 15.0f;
 
