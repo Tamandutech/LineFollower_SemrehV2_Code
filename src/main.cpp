@@ -1061,9 +1061,12 @@ void setup()
 
   xTaskCreatePinnedToCore(CalculateLeftSpeed,"Left Motor Speed",10000,NULL,1,NULL,1);
   xTaskCreatePinnedToCore(CalculateRightSpeed,"Right Motor Speed",10000,NULL,1,NULL,1);
+<<<<<<< HEAD
   xTaskCreatePinnedToCore(calculateRobotSpeed,"Velocidade",10000,NULL,1,NULL,1);
   //xTaskCreatePinnedToCore(CreateMarkByArray, "Create a mark", 10000, NULL, 1, NULL, 1);
   //xTaskCreatePinnedToCore(CheckIfCurve, "Create a marking", 10000, NULL, 1, NULL, 1);
+=======
+>>>>>>> parent of c952ed2 (Adicionado a função CheckIfCurve no processamento paralelo)
   //xTaskCreatePinnedToCore(ler_laterais,"Sensores Laterais",4000,NULL,1,NULL,0);
 }
 
